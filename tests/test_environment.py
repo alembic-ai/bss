@@ -1,0 +1,346 @@
+"""Tests for BSS environment manager."""
+
+import pytest
+from pathlib import Path
+
+from src.bss.environment import BSSEnvironment, sort_by_triage
+from src.bss.blink_file import BlinkFile, write as write_blink
+from src.bss.identifier import generate
+
+
+@pytest.fixture
+def bss_env(tmp_path) -> BSSEnvironment:
+    """Create a fresh BSS environment for testing."""
+    return BSSEnvironment.init(tmp_path)
+
+
+def _make_blink(sequence: int, author: str = "A", **kwargs) -> BlinkFile:
+    """Helper to create a valid blink with specific attributes."""
+    defaults = dict(
+        action_energy="~", action_valence="!",
+        relational="+", confidence=".", cognitive="=",
+        domain="#", subdomain="!", scope="-",
+        maturity="~", priority="=", sensitivity="=",
+    )
+    defaults.update(kwargs)
+
+    if sequence == 1 and defaults.get("relational") == "+":
+        defaults["relational"] = "^"
+
+    blink_id = generate(sequence=sequence, author=author, **defaults)
+
+    if defaults["relational"] == "^":
+        born_from = ["Origin"]
+        lineage = [blink_id]
+    else:
+        # Simple parent reference
+        parent_id = generate(sequence=sequence - 1, author=author,
+                             relational="^" if sequence == 2 else "+",
+                             action_energy="~", action_valence="~",
+                             confidence="!", cognitive="!",
+                             domain="^", subdomain=";", scope="!",
+                             maturity=",", priority="=", sensitivity=".")
+        born_from = [parent_id]
+        lineage = [parent_id, blink_id]
+
+    return BlinkFile(
+        blink_id=blink_id,
+        born_from=born_from,
+        summary="Working on a task in the environment. Making steady progress forward.",
+        lineage=lineage,
+        links=[],
+    )
+
+
+# ============================================================
+# Init Tests
+# ============================================================
+
+
+class TestInit:
+    """BSSEnvironment.init() tests."""
+
+    def test_creates_required_directories(self, tmp_path):
+        env = BSSEnvironment.init(tmp_path)
+        assert (tmp_path / "relay").is_dir()
+        assert (tmp_path / "active").is_dir()
+        assert (tmp_path / "profile").is_dir()
+        assert (tmp_path / "archive").is_dir()
+
+    def test_creates_artifacts_directory(self, tmp_path):
+        env = BSSEnvironment.init(tmp_path)
+        assert (tmp_path / "artifacts").is_dir()
+
+    def test_is_valid(self, bss_env):
+        assert bss_env.is_valid()
+
+    def test_idempotent(self, tmp_path):
+        """init() can be called multiple times without error."""
+        BSSEnvironment.init(tmp_path)
+        BSSEnvironment.init(tmp_path)
+        assert (tmp_path / "relay").is_dir()
+
+
+# ============================================================
+# Sequence Tests
+# ============================================================
+
+
+class TestSequence:
+    """highest_sequence() and next_sequence() tests."""
+
+    def test_empty_environment(self, bss_env):
+        assert bss_env.highest_sequence() == "00000"
+        assert bss_env.next_sequence() == "00001"
+
+    def test_after_one_blink(self, bss_env):
+        blink = _make_blink(1, relational="^")
+        write_blink(blink, bss_env.active_dir)
+        assert bss_env.highest_sequence() == "00001"
+        assert bss_env.next_sequence() == "00002"
+
+    def test_scans_all_directories(self, bss_env):
+        """highest_sequence scans relay, active, profile, archive."""
+        b1 = _make_blink(1, relational="^")
+        b5 = _make_blink(5)
+        b10 = _make_blink(10)
+
+        write_blink(b1, bss_env.relay_dir)
+        write_blink(b5, bss_env.active_dir)
+        write_blink(b10, bss_env.profile_dir)
+
+        assert bss_env.highest_sequence() == "0000A"  # 10 in base-36
+        assert bss_env.next_sequence() == "0000B"
+
+
+# ============================================================
+# Find Tests
+# ============================================================
+
+
+class TestFind:
+    """find_blink() tests."""
+
+    def test_find_in_active(self, bss_env):
+        blink = _make_blink(1, relational="^")
+        write_blink(blink, bss_env.active_dir)
+        found = bss_env.find_blink(blink.blink_id)
+        assert found is not None
+        assert found.parent == bss_env.active_dir
+
+    def test_find_in_relay(self, bss_env):
+        blink = _make_blink(1, relational="^")
+        write_blink(blink, bss_env.relay_dir)
+        found = bss_env.find_blink(blink.blink_id)
+        assert found is not None
+        assert found.parent == bss_env.relay_dir
+
+    def test_find_in_archive_subdirectory(self, bss_env):
+        """find_blink resolves across archive subdirectories."""
+        subdir = bss_env.archive_dir / "2026-Q1"
+        subdir.mkdir()
+        blink = _make_blink(1, relational="^")
+        write_blink(blink, subdir)
+        found = bss_env.find_blink(blink.blink_id)
+        assert found is not None
+        assert "2026-Q1" in str(found)
+
+    def test_find_nonexistent(self, bss_env):
+        found = bss_env.find_blink("99999Z~~+.=#.-~..")
+        assert found is None
+
+
+# ============================================================
+# Move Tests
+# ============================================================
+
+
+class TestMove:
+    """move_blink() tests."""
+
+    def test_move_preserves_filename(self, bss_env):
+        blink = _make_blink(1, relational="^")
+        write_blink(blink, bss_env.active_dir)
+        new_path = bss_env.move_blink(blink.blink_id, "archive")
+        assert new_path.name == f"{blink.blink_id}.md"
+
+    def test_move_preserves_content(self, bss_env):
+        blink = _make_blink(1, relational="^")
+        filepath = write_blink(blink, bss_env.active_dir)
+        original_content = filepath.read_text()
+        new_path = bss_env.move_blink(blink.blink_id, "archive")
+        assert new_path.read_text() == original_content
+
+    def test_move_removes_from_source(self, bss_env):
+        blink = _make_blink(1, relational="^")
+        write_blink(blink, bss_env.active_dir)
+        bss_env.move_blink(blink.blink_id, "archive")
+        assert not (bss_env.active_dir / f"{blink.blink_id}.md").exists()
+
+    def test_move_nonexistent_raises(self, bss_env):
+        with pytest.raises(FileNotFoundError):
+            bss_env.move_blink("99999Z~~+.=#.-~..", "archive")
+
+
+# ============================================================
+# Triage Ordering Tests (Module 8.2.3 - 8.2.5)
+# ============================================================
+
+
+class TestTriageOrdering:
+    """Triage ordering matches Module 8.2.3-8.2.5 test cases."""
+
+    def test_urgency_ordering(self, bss_env):
+        """Module 8.2.3: Urgency-based triage ordering.
+
+        Three blinks with different urgency levels:
+        - Seq 5: priority ^ (High), sensitivity = (Whenever)  → ^=
+        - Seq 3: priority ! (Critical), sensitivity ! (Blocking) → !!
+        - Seq 7: priority ! (Critical), sensitivity ^ (Soon)   → !^
+
+        Expected order: !! → !^ → ^=
+        """
+        b5 = _make_blink(5, priority="^", sensitivity="=")
+        b3 = _make_blink(3, priority="!", sensitivity="!")
+        b7 = _make_blink(7, priority="!", sensitivity="^")
+
+        write_blink(b5, bss_env.relay_dir)
+        write_blink(b3, bss_env.relay_dir)
+        write_blink(b7, bss_env.relay_dir)
+
+        triaged = bss_env.triage("relay")
+        assert len(triaged) == 3
+        # First: Critical + Blocking (seq 3)
+        assert triaged[0].blink_id == b3.blink_id
+        # Second: Critical + Soon (seq 7)
+        assert triaged[1].blink_id == b7.blink_id
+        # Third: High + Whenever (seq 5)
+        assert triaged[2].blink_id == b5.blink_id
+
+    def test_recency_tiebreak(self, bss_env):
+        """Module 8.2.4: When urgency is tied, recency breaks the tie.
+
+        Two blinks with identical urgency (^=):
+        - Seq 10
+        - Seq 25
+
+        Expected: Seq 25 first (more recent).
+        """
+        b10 = _make_blink(10, priority="^", sensitivity="=")
+        b25 = _make_blink(25, priority="^", sensitivity="=")
+
+        write_blink(b10, bss_env.relay_dir)
+        write_blink(b25, bss_env.relay_dir)
+
+        triaged = bss_env.triage("relay")
+        assert triaged[0].blink_id == b25.blink_id
+        assert triaged[1].blink_id == b10.blink_id
+
+    def test_scope_tiebreak(self, bss_env):
+        """Module 8.2.5: Scope as third tiebreaker after urgency + recency.
+
+        Two blinks with identical urgency (^=) and adjacent sequences:
+        - Seq 10: scope = (Regional)
+        - Seq 11: scope ! (Global)
+
+        Expected: Seq 11 first (recency takes precedence over scope).
+        """
+        b10 = _make_blink(10, priority="^", sensitivity="=", scope="=")
+        b11 = _make_blink(11, priority="^", sensitivity="=", scope="!")
+
+        write_blink(b10, bss_env.relay_dir)
+        write_blink(b11, bss_env.relay_dir)
+
+        triaged = bss_env.triage("relay")
+        assert triaged[0].blink_id == b11.blink_id  # Recency wins
+
+
+# ============================================================
+# Immutability Tests
+# ============================================================
+
+
+class TestImmutability:
+    """Immutability checking tests."""
+
+    def test_unchanged_blink_passes(self, bss_env):
+        blink = _make_blink(1, relational="^")
+        filepath = write_blink(blink, bss_env.active_dir)
+        # First read records hash
+        bss_env.scan("active")
+        assert bss_env.check_immutability(blink.blink_id) is True
+
+    def test_modified_blink_fails(self, bss_env):
+        blink = _make_blink(1, relational="^")
+        filepath = write_blink(blink, bss_env.active_dir)
+        # First read records hash
+        bss_env.scan("active")
+        # Tamper with the file
+        filepath.write_text("Tampered content", encoding="utf-8")
+        assert bss_env.check_immutability(blink.blink_id) is False
+
+    def test_no_hash_raises(self, bss_env):
+        with pytest.raises(KeyError):
+            bss_env.check_immutability("99999Z~~+.=#.-~..")
+
+
+# ============================================================
+# Relay Backlog Tests
+# ============================================================
+
+
+class TestRelayBacklog:
+    """Relay hygiene tests."""
+
+    def test_backlog_warning(self, bss_env):
+        """Module 8.2.7: Warning when relay exceeds 10 blinks."""
+        for i in range(1, 12):  # 11 blinks
+            blink = _make_blink(i, relational="^" if i == 1 else "+")
+            write_blink(blink, bss_env.relay_dir)
+
+        with pytest.warns(UserWarning, match="exceeding"):
+            bss_env.check_relay_backlog()
+
+    def test_no_warning_under_threshold(self, bss_env):
+        for i in range(1, 6):  # 5 blinks
+            blink = _make_blink(i, relational="^" if i == 1 else "+")
+            write_blink(blink, bss_env.relay_dir)
+
+        result = bss_env.check_relay_backlog()
+        assert result is False
+
+
+# ============================================================
+# Artifact Tests
+# ============================================================
+
+
+class TestArtifacts:
+    """Artifact management tests."""
+
+    def test_find_artifact(self, bss_env):
+        # Create a fake artifact
+        (bss_env.artifacts_dir / "00001A-test-module.py").write_text("# test")
+        result = bss_env.find_artifact("00001", "A")
+        assert result is not None
+        assert result.name == "00001A-test-module.py"
+
+    def test_find_artifact_not_found(self, bss_env):
+        result = bss_env.find_artifact("99999", "Z")
+        assert result is None
+
+    def test_register_artifact(self, bss_env, tmp_path):
+        # Create a source file
+        source = tmp_path / "mycode.py"
+        source.write_text("print('hello')")
+
+        blink_id = generate(sequence=1, author="A", relational="^",
+                            action_energy="~", action_valence="~",
+                            confidence="!", cognitive="!",
+                            domain="^", subdomain=";", scope="!",
+                            maturity=",", priority="=", sensitivity=".")
+
+        result = bss_env.register_artifact(blink_id, source, "my-code")
+        assert result.exists()
+        assert result.name == "00001A-my-code.py"
+        assert result.read_text() == "print('hello')"
