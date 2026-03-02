@@ -100,7 +100,7 @@ class TestFullWorkflow:
 
         # 4. Verify convergence blink
         meta = parse_id(conv.blink_id)
-        assert meta.relational == "<"
+        assert meta.relational == "{"
         assert get_generation(env, conv.blink_id) == 1
         assert conv.lineage == [conv.blink_id]
         assert len(conv.links) == 7  # References all chain members
@@ -680,3 +680,126 @@ class TestBulkValidation:
         chain = get_chain(env, c3.blink_id)
         assert len(chain) == 4
         assert [b.blink_id for b in chain] == c3.lineage
+
+
+# ============================================================
+# 5.6 — Roster Management End-to-End
+# ============================================================
+
+
+class TestRosterManagementEndToEnd:
+    """Full roster lifecycle: create → add → update → config → remove."""
+
+    def test_roster_lifecycle(self, env):
+        """Full cycle: create roster, add model, update, generate config, remove."""
+        from src.bss.roster import generate_model_config
+
+        # 1. Create initial roster with one model
+        entries_v1 = [
+            RosterEntry("A", "Claude-A", "primary", "global", "Lead agent"),
+        ]
+        r1 = update_roster(env, entries_v1)
+        roster = read_roster(env)
+        assert len(roster.entries) == 1
+
+        # 2. Add a second model
+        entries_v2 = list(roster.entries) + [
+            RosterEntry("B", "Claude-B", "specialist", "local", "Parser module"),
+        ]
+        r2 = update_roster(env, entries_v2, old_roster_id=roster.blink_id)
+
+        # Old roster archived
+        old_path = env.find_blink(r1.blink_id)
+        assert old_path is not None
+        assert "archive" in str(old_path)
+
+        # New roster in profile
+        roster = read_roster(env)
+        assert len(roster.entries) == 2
+
+        # 3. Update B's ceiling
+        new_entries = []
+        for e in roster.entries:
+            if e.sigil == "B":
+                new_entries.append(RosterEntry("B", e.model_id, e.role, "regional", e.notes))
+            else:
+                new_entries.append(e)
+        r3 = update_roster(env, new_entries, old_roster_id=roster.blink_id)
+
+        roster = read_roster(env)
+        assert roster.get_entry("B").scope_ceiling == "regional"
+
+        # 4. Generate config for B
+        config = generate_model_config(roster, "B", env)
+        assert "Author sigil: B" in config
+        assert "regional" in config
+        assert "<-- you" in config
+
+        # 5. Scope compliance: B at regional can write regional but not global
+        regional_id = _make_id(env, author="B", scope="=")
+        regional_blink = BlinkFile(
+            blink_id=regional_id,
+            born_from=["Origin"],
+            summary="Regional action from B. This should be within scope ceiling.",
+            lineage=[regional_id],
+            links=[],
+        )
+        assert check_scope_compliance(roster, "B", regional_blink) is True
+
+        global_id = _make_id(env, author="B", scope="!")
+        global_blink = BlinkFile(
+            blink_id=global_id,
+            born_from=["Origin"],
+            summary="Global action from B. This should exceed the scope ceiling.",
+            lineage=[global_id],
+            links=[],
+        )
+        assert check_scope_compliance(roster, "B", global_blink) is False
+
+        # 6. Remove B
+        final_entries = [e for e in roster.entries if e.sigil != "B"]
+        r4 = update_roster(env, final_entries, old_roster_id=roster.blink_id)
+
+        roster = read_roster(env)
+        assert len(roster.entries) == 1
+        assert roster.get_entry("B") is None
+        assert roster.get_entry("A") is not None
+
+        # 7. Validate all blinks
+        for dirname in ["relay", "active", "profile"]:
+            for b in env.scan(dirname):
+                valid, violations = validate_file(b)
+                assert valid, f"{b.blink_id} in {dirname}: {violations}"
+
+    def test_artifact_with_roster_integration(self, env):
+        """Artifacts work alongside roster management."""
+        from src.bss.roster import generate_model_config
+
+        # Setup roster
+        entries = [
+            RosterEntry("A", "Claude-A", "primary", "global", "Lead"),
+        ]
+        update_roster(env, entries)
+
+        # Write origin blink
+        origin = _write_origin(env)
+
+        # Register an artifact
+        src_file = env.root / "temp_code.py"
+        src_file.write_text("# artifact content")
+        artifact = env.register_artifact(origin.blink_id, src_file, "code-module")
+        assert artifact.exists()
+
+        # List artifacts
+        artifacts = env.list_artifacts()
+        assert len(artifacts) == 1
+
+        # Find parent via prefix
+        prefix = artifact.name[:6]
+        parent = env.find_blink_by_prefix(prefix)
+        assert parent is not None
+
+        # Config should show relay state reflecting the blinks
+        roster = read_roster(env)
+        config = generate_model_config(roster, "A", env)
+        assert "Next sequence" in config

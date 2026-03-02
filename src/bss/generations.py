@@ -12,8 +12,8 @@ MAX_GENERATION = 7
 def get_generation(env: BSSEnvironment, blink_id: str) -> int:
     """Walk the Born from chain to determine a blink's generation.
 
-    Generation 1 = origin (^) or convergence (<) blink.
-    Each continuation (+) or branch (>) increments by 1.
+    Generation 1 = origin (^) or convergence ({) blink.
+    Each continuation (+) or branch (}) increments by 1.
 
     Args:
         env: The BSS environment.
@@ -39,7 +39,7 @@ def get_generation(env: BSSEnvironment, blink_id: str) -> int:
             break
 
         # Origin or convergence = generation 1
-        if meta.relational in ("^", "<"):
+        if meta.relational in ("^", "{"):
             return generation
 
         # Find the blink file to get its parent
@@ -118,7 +118,7 @@ def converge(
     """Write a convergence blink synthesizing a generation chain.
 
     The convergence blink:
-    - Has relational sigil '<' (convergence)
+    - Has relational sigil '{' (convergence)
     - Resets generation to 1 for the new chain
     - Moves key ancestor references to Links
     - Starts a new lineage from itself
@@ -139,7 +139,7 @@ def converge(
         author=author,
         action_energy="~",
         action_valence=".",
-        relational="<",  # Convergence
+        relational="{",  # Convergence
         confidence="!",
         cognitive=".",  # Resolution
         domain=domain,

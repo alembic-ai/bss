@@ -22,7 +22,7 @@ from src.bss.sigils import (
 # Module 8.1 — Canonical Validation Tests
 # ============================================================
 #
-# NOTE: Some canonical test vectors in the spec (v2.0 Module 8.1)
+# NOTE: Some canonical test vectors in the spec (v1.0 Module 8.1)
 # contain sigil values that are not in the grammar definitions
 # (e.g., '=' at position 12 in 00001A~~^!!=~;,~. is not a valid
 # domain sigil per Section 3.3). Where the grammar (Module 3) and
@@ -45,12 +45,12 @@ class TestCanonicalValid:
     """
 
     def test_second_canonical_blink(self):
-        """0002FB~!>!^#!=~^= — Model B, handoff, branch, breakthrough.
+        """0002FB~!}!^#!=~^= — Model B, handoff, branch, breakthrough.
 
         This is fully valid against the grammar. 0002F = 87 decimal
         (spec annotation says 95, which is a documentation error).
         """
-        blink_id = "0002FB~!>!^#!=~^="
+        blink_id = "0002FB~!}!^#!=~^="
         valid, violations = validate(blink_id)
         assert valid, f"Should be valid but got violations: {violations}"
         meta = parse(blink_id)
@@ -59,7 +59,7 @@ class TestCanonicalValid:
         assert meta.author == "B"
         assert meta.action_energy == "~"
         assert meta.action_valence == "!"
-        assert meta.relational == ">"
+        assert meta.relational == "}"
         assert meta.confidence == "!"
         assert meta.cognitive == "^"
         assert meta.domain == "#"
@@ -431,7 +431,7 @@ class TestParse:
     """parse() function tests."""
 
     def test_parse_returns_dataclass(self):
-        meta = parse("0002FB~!>!^#!=~^=")
+        meta = parse("0002FB~!}!^#!=~^=")
         assert isinstance(meta, BlinkMetadata)
 
     def test_parse_wrong_length_raises(self):
@@ -439,13 +439,13 @@ class TestParse:
             parse("short")
 
     def test_parse_all_positions(self):
-        meta = parse("0002FB~!>!^#!=~^=")
+        meta = parse("0002FB~!}!^#!=~^=")
         assert meta.sequence == "0002F"
         assert meta.sequence_decimal == 87  # 0002F = 87, not 95
         assert meta.author == "B"
         assert meta.action_energy == "~"
         assert meta.action_valence == "!"
-        assert meta.relational == ">"
+        assert meta.relational == "}"
         assert meta.confidence == "!"
         assert meta.cognitive == "^"
         assert meta.domain == "#"
@@ -476,7 +476,7 @@ class TestGenerate:
             author="B",
             action_energy="~",
             action_valence="!",
-            relational=">",
+            relational="}",
             confidence="!",
             cognitive="^",
             domain="#",
@@ -486,7 +486,7 @@ class TestGenerate:
             priority="^",
             sensitivity="=",
         )
-        assert blink_id == "0002FB~!>!^#!=~^="
+        assert blink_id == "0002FB~!}!^#!=~^="
 
     def test_generate_with_string_sequence(self):
         blink_id = generate(sequence="0002F", author="A")
@@ -555,8 +555,8 @@ class TestDescribe:
     """describe() function for human-readable output."""
 
     def test_describe_valid(self):
-        result = describe("0002FB~!>!^#!=~^=")
-        assert "Blink ID: 0002FB~!>!^#!=~^=" in result
+        result = describe("0002FB~!}!^#!=~^=")
+        assert "Blink ID: 0002FB~!}!^#!=~^=" in result
         assert "Sequence" in result
         assert "87" in result  # 0002F = 87
         assert "Handoff" in result

@@ -72,7 +72,7 @@ class TestBornFromMultipleParents:
         parent1 = _write_blink(env, 10, relational="^")
         parent2 = _write_blink(env, 15, author="B", relational="^")
 
-        conv_id = _make_id(20, relational="<")
+        conv_id = _make_id(20, relational="{")
         conv = BlinkFile(
             blink_id=conv_id,
             born_from=[parent1.blink_id, parent2.blink_id],
@@ -83,7 +83,7 @@ class TestBornFromMultipleParents:
         write_blink(conv, env.active_dir)
 
         meta = parse_id(conv.blink_id)
-        assert meta.relational == "<"
+        assert meta.relational == "{"
         assert len(conv.born_from) == 2
 
 

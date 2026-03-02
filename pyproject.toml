@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=68.0", "wheel"]
-build-backend = "setuptools.backends._legacy:_Backend"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "blink-sigil-system"
@@ -13,15 +13,46 @@ authors = [
     {name = "Alembic AI"},
     {name = "Cam"},
 ]
+keywords = ["blink", "sigil", "relay", "ai", "coordination", "protocol"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
 dependencies = [
     "typer>=0.9.0",
     "rich>=13.0.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/alembic-ai/bss"
+Repository = "https://github.com/alembic-ai/bss"
+Specification = "https://github.com/alembic-ai/bss/blob/main/bss_spec/BSS_SPEC_v1.md"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
+    "pytest-asyncio>=0.21.0",
+]
+relay = [
+    "llama-cpp-python>=0.2.0",
+    "textual>=0.40.0",
+    "pyyaml>=6.0",
+]
+anthropic = [
+    "anthropic>=0.30.0",
+]
+gemini = [
+    "google-genai>=1.0.0",
+]
+huggingface = [
+    "huggingface-hub>=0.20.0",
+]
+all-providers = [
+    "blink-sigil-system[relay,anthropic,gemini,huggingface]",
 ]
 
 [project.scripts]
@@ -29,7 +60,7 @@ bss = "cli.main:app"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["src*", "cli*"]
+include = ["src*", "cli*", "integrations*", "terminal*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

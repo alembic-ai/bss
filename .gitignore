@@ -16,3 +16,22 @@ htmlcov/
 *.so
 .mypy_cache/
 .ruff_cache/
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Claude Code
+.claude/
+
+# BSS runtime
+integrations/config.yaml
+mind/
+*.gguf

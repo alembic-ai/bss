@@ -18,7 +18,7 @@ BLINK_ID_PATTERN = re.compile(
     r"^[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]"
     r"[A-Z0-9]"
     r"[!.~][!.~#]"
-    r"[\^><#=_+]"
+    r"[\^}{#=_+]"
     r"[!.~,]"
     r"[!~\^%=#.&]"
     r"[@#$&!~%\^+;]"
@@ -74,7 +74,7 @@ def _contains_blink_id(text: str) -> bool:
     """
     # Look for 5 base-36 chars followed by specific sigil patterns
     pattern = re.compile(
-        r'[0-9A-Z]{5}[A-Z0-9][!.~][!.~#][\^><#=_+][!.~,][!~\^%=#.&]'
+        r'[0-9A-Z]{5}[A-Z0-9][!.~][!.~#][\^}{#=_+][!.~,][!~\^%=#.&]'
         r'[@#$&!~%\^+;][!~\^.=&\-+;,][.\-=!][,~.!\-][!\^=.~][!\^=.]'
     )
     return bool(pattern.search(text))

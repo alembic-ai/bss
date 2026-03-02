@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
 
 from src.bss.blink_file import BlinkFile, write as write_blink, read as read_blink
 from src.bss.environment import BSSEnvironment

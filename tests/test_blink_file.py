@@ -110,7 +110,7 @@ class TestRoundTrip:
                               confidence=".", cognitive="=",
                               domain="#", subdomain="!", scope="-",
                               maturity="~", priority="=", sensitivity="=")
-        conv_id = generate(sequence=3, author="A", relational="<",
+        conv_id = generate(sequence=3, author="A", relational="{",
                            action_energy="~", action_valence=".",
                            confidence="!", cognitive=".",
                            domain="#", subdomain="!", scope="=",
@@ -342,7 +342,7 @@ class TestValidation:
         Per Module 8.2.12, convergence Born from 'references the generation 7
         blink (and MAY reference earlier blinks)' — single parent is allowed.
         """
-        conv_id = generate(sequence=3, author="A", relational="<",
+        conv_id = generate(sequence=3, author="A", relational="{",
                            action_energy="~", action_valence=".",
                            confidence="!", cognitive=".",
                            domain="#", subdomain="!", scope="=",
@@ -471,8 +471,8 @@ class TestBornFromParsing:
         content = (
             "Born from: 00001A~~+.=#.-~.. | 00002B.!+.=#.-~..\n\n"
             "Converging two threads. Both contributed insights.\n\n"
-            "Lineage: 00003A~.<.=#.=~..\n\n"
+            "Lineage: 00003A~.{.=#.=~..\n\n"
             "Links:\n"
         )
-        blink = parse_content("00003A~.<.=#.=~..", content)
+        blink = parse_content("00003A~.{.=#.=~..", content)
         assert blink.born_from == ["00001A~~+.=#.-~..", "00002B.!+.=#.-~.."]

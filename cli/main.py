@@ -18,29 +18,25 @@ from src.bss.identifier import (
     parse as parse_id,
     validate as validate_id,
     base36_decode,
-    base36_encode,
 )
 from src.bss.sigils import (
     ACTION_STATES,
-    RELATIONAL,
-    CONFIDENCE,
-    COGNITIVE,
     DOMAIN,
     SUBDOMAIN,
-    SCOPE,
-    MATURITY,
-    PRIORITY,
-    SENSITIVITY,
     describe as describe_blink_id,
 )
-from src.bss.relay import handoff, error_blink, check_escalation
+from src.bss.relay import check_escalation
 from src.bss.roster import (
     RosterEntry,
+    Roster,
     read_roster,
     update_roster,
     check_scope_compliance,
+    generate_model_config,
+    VALID_ROLES,
+    VALID_CEILINGS,
 )
-from src.bss.generations import get_generation, needs_convergence, get_chain
+from src.bss.generations import get_chain
 
 app = typer.Typer(
     name="bss",
@@ -74,7 +70,7 @@ def init(
     root = path or Path.cwd()
 
     console.print(Panel(
-        "[bold]BLINK SIGIL SYSTEM — v2.0[/bold]\n[dim]Alembic AI[/dim]",
+        "[bold]BLINK SIGIL SYSTEM — v1.0[/bold]\n[dim]Alembic AI[/dim]",
         style="blue",
     ))
     console.print()
@@ -178,7 +174,7 @@ def status(
 
     console.print()
     console.print(f"  [bold]BSS Environment:[/bold] {env.root}")
-    console.print(f"  Spec version: 2.0")
+    console.print(f"  Spec version: 1.0")
     console.print(f"  Total blinks: {total}")
     console.print()
     console.print(f"  /relay/    {relay_count} blinks")
@@ -202,12 +198,13 @@ def status(
         # Find the latest blink
         for dirname in ["relay", "active", "profile"]:
             for f in (env.root / dirname).glob("*.md"):
-                if f.stem.startswith(highest):
+                blink_name = f.name[:-3]  # Strip .md without losing trailing '.'
+                if blink_name.startswith(highest):
                     try:
-                        meta = parse_id(f.stem)
-                        action = f.stem[6:8]
+                        meta = parse_id(blink_name)
+                        action = blink_name[6:8]
                         action_label = ACTION_STATES.get(action, "?")
-                        console.print(f"  Latest blink: {f.stem}")
+                        console.print(f"  Latest blink: {blink_name}")
                         console.print(
                             f"    \u2192 {action_label} from "
                             f"{'User' if meta.author == 'U' else 'System' if meta.author == 'S' else f'Model {meta.author}'}"
@@ -456,8 +453,8 @@ def tree(
     for blink in chain[1:]:
         try:
             meta = parse_id(blink.blink_id)
-            rel_symbol = {"^": "\u2500^", ">": "\u251c\u2500>", "+": "\u2514\u2500+",
-                          "<": "\u2514\u2500<", "_": "\u2514\u2500_",
+            rel_symbol = {"^": "\u2500^", "}": "\u251c\u2500}", "+": "\u2514\u2500+",
+                          "{": "\u2514\u2500{", "_": "\u2514\u2500_",
                           "=": "\u2514\u2500=", "#": "\u2514\u2500#"}.get(meta.relational, "\u2514\u2500")
 
             label = f"[bold]{blink.blink_id}[/bold]  ({_short_summary(blink)})"
@@ -525,8 +522,8 @@ def write_cmd(
     rel_choices = [
         ("^", "New thread (origin)"),
         ("+", "Continuing existing thread"),
-        (">", "Branching from existing thread"),
-        ("<", "Merging/converging threads"),
+        ("}", "Branching from existing thread"),
+        ("{", "Merging/converging threads"),
         ("_", "Dead end / abandoned"),
         ("=", "Reinforcing / echoing"),
         ("#", "Contradicting / challenging"),
@@ -637,6 +634,24 @@ def write_cmd(
         sensitivity=sensitivity,
     )
 
+    # Scope compliance check
+    roster = read_roster(env)
+    if roster:
+        temp_blink = BlinkFile(
+            blink_id=blink_id,
+            born_from=["Origin"],
+            summary="temp",
+            lineage=[blink_id],
+            links=[],
+        )
+        if not check_scope_compliance(roster, author, temp_blink):
+            entry = roster.get_entry(author)
+            ceiling = entry.scope_ceiling if entry else "unknown"
+            console.print(
+                f"\n  [yellow]Warning: Author {author} has scope ceiling "
+                f"'{ceiling}' but this blink uses scope '{scope}'.[/yellow]"
+            )
+
     console.print(f"\n  [bold]Preview:[/bold]")
     console.print(f"    ID: {blink_id}")
     console.print(f"    {describe_blink_id(blink_id)}")
@@ -700,12 +715,7 @@ def artifacts(
     """List all artifacts with parent blink info."""
     env = _get_env(path)
 
-    if not env.artifacts_dir.exists():
-        console.print("\n  No artifacts directory found.\n")
-        return
-
-    files = sorted(env.artifacts_dir.iterdir())
-    files = [f for f in files if f.is_file()]
+    files = env.list_artifacts()
 
     if not files:
         console.print("\n  No artifacts found.\n")
@@ -722,8 +732,8 @@ def artifacts(
         name = f.name
         if len(name) >= 7 and name[6] == "-":
             prefix = name[:6]
-            parent = env.find_blink_by_prefix(prefix) if hasattr(env, 'find_blink_by_prefix') else None
-            parent_label = parent.stem if parent else f"{prefix}..."
+            parent = env.find_blink_by_prefix(prefix)
+            parent_label = parent.name[:-3] if parent else f"{prefix}..."
         else:
             parent_label = "?"
 
@@ -733,6 +743,378 @@ def artifacts(
 
     console.print(table)
     console.print()
+
+
+# ============================================================
+# bss artifact <sequence>
+# ============================================================
+
+
+@app.command()
+def artifact(
+    sequence: str = typer.Argument(..., help="5-char sequence or 6-char sequence+author prefix"),
+    path: Optional[Path] = typer.Option(None, "--path", "-p"),
+):
+    """Show artifact details and parent blink info."""
+    env = _get_env(path)
+
+    # Search artifacts by prefix
+    prefix = sequence.upper()
+    if len(prefix) not in (5, 6):
+        console.print(f"[red]Prefix must be 5 or 6 characters, got {len(prefix)}[/red]")
+        raise typer.Exit(1)
+
+    # Find matching artifact
+    artifact_path = None
+    search_prefix = prefix + ("-" if len(prefix) == 6 else "")
+    for f in env.list_artifacts():
+        if f.name.startswith(search_prefix) or (len(prefix) == 5 and f.name[:5] == prefix):
+            artifact_path = f
+            break
+
+    if artifact_path is None:
+        console.print(f"\n  [red]No artifact found matching '{prefix}'[/red]\n")
+        raise typer.Exit(1)
+
+    # Extract blink prefix from artifact name
+    name = artifact_path.name
+    blink_prefix = name[:6] if len(name) >= 7 and name[6] == "-" else None
+
+    # Find parent blink
+    parent_blink = None
+    parent_path = None
+    if blink_prefix:
+        parent_path = env.find_blink_by_prefix(blink_prefix)
+        if parent_path:
+            parent_blink = read_blink(parent_path)
+
+    # Display
+    console.print()
+    size = artifact_path.stat().st_size
+    size_label = f"{size:,} B" if size < 1024 else f"{size / 1024:.1f} KB"
+
+    panel_lines = [
+        f"[bold]File:[/bold] {artifact_path.name}",
+        f"[bold]Size:[/bold] {size_label}",
+        f"[bold]Extension:[/bold] {artifact_path.suffix}",
+    ]
+
+    if parent_blink:
+        panel_lines.append("")
+        panel_lines.append(f"[bold]Parent Blink:[/bold] {parent_blink.blink_id}")
+        panel_lines.append(f"[bold]Directory:[/bold] /{parent_path.parent.name}/")
+        summary = parent_blink.summary.replace("\n", " ")
+        if len(summary) > 80:
+            summary = summary[:77] + "..."
+        panel_lines.append(f"[bold]Summary:[/bold] {summary}")
+    elif blink_prefix:
+        panel_lines.append("")
+        panel_lines.append(f"[bold]Parent Blink:[/bold] {blink_prefix}... (not found)")
+
+    console.print(Panel(
+        "\n".join(panel_lines),
+        title=f"Artifact: {artifact_path.name}",
+        style="blue",
+    ))
+    console.print()
+
+
+# ============================================================
+# bss produce <file>
+# ============================================================
+
+
+def _derive_slug(filename: str) -> str:
+    """Derive an artifact slug from a filename.
+
+    Lowercase, hyphens for separators, strip extension.
+    """
+    name = Path(filename).stem
+    # Replace underscores, spaces, dots with hyphens
+    slug = name.replace("_", "-").replace(" ", "-").replace(".", "-")
+    # Lowercase
+    slug = slug.lower()
+    # Collapse multiple hyphens
+    import re
+    slug = re.sub(r"-+", "-", slug)
+    # Strip leading/trailing hyphens
+    slug = slug.strip("-")
+    return slug
+
+
+@app.command()
+def produce(
+    file: Path = typer.Argument(..., help="File to register as artifact"),
+    blink: Optional[str] = typer.Option(None, "--blink", "-b", help="Link to existing blink ID"),
+    slug: Optional[str] = typer.Option(None, "--slug", "-s", help="Artifact slug (default: derived from filename)"),
+    path: Optional[Path] = typer.Option(None, "--path", "-p"),
+):
+    """Register an existing file as a BSS artifact."""
+    env = _get_env(path)
+
+    if not file.exists():
+        console.print(f"[red]File not found: {file}[/red]")
+        raise typer.Exit(1)
+
+    # Determine slug
+    artifact_slug = slug or _derive_slug(file.name)
+
+    # Determine parent blink
+    blink_id = blink
+    if blink_id is None:
+        # Interactive: ask for blink ID or create one
+        console.print()
+        choice = typer.prompt(
+            "  Link to existing blink ID, or 'new' to create one",
+            default="new",
+        )
+        if choice.lower() == "new":
+            # Create a simple informational blink
+            seq = env.next_sequence()
+            author = typer.prompt("  Author sigil", default="A").upper()
+            summary = typer.prompt(
+                "  Summary (2-5 sentences)",
+                default=f"Produced artifact '{artifact_slug}' from {file.name}. Registered in artifacts directory.",
+            )
+            blink_id = generate(
+                sequence=seq,
+                author=author,
+                action_energy="~",
+                action_valence=".",
+                relational="^",
+                confidence="!",
+                cognitive="=",
+                domain="#",
+                subdomain="!",
+                scope="-",
+                maturity="!",
+                priority="=",
+                sensitivity=".",
+            )
+            new_blink = BlinkFile(
+                blink_id=blink_id,
+                born_from=["Origin"],
+                summary=summary,
+                lineage=[blink_id],
+                links=[],
+            )
+            write_blink(new_blink, env.active_dir)
+            console.print(f"  [green]\u2192[/green] Created blink {blink_id}")
+        else:
+            blink_id = choice
+
+    # Validate blink exists
+    if env.find_blink(blink_id) is None:
+        console.print(f"[red]Blink not found: {blink_id}[/red]")
+        raise typer.Exit(1)
+
+    # Register the artifact
+    artifact_path = env.register_artifact(blink_id, file, artifact_slug)
+    console.print(f"  [green]\u2192[/green] Registered artifact: {artifact_path.name}")
+    console.print(f"    Linked to blink: {blink_id}")
+    console.print()
+
+
+# ============================================================
+# bss roster-add
+# ============================================================
+
+
+@app.command(name="roster-add")
+def roster_add(
+    sigil: str = typer.Argument(..., help="Author sigil (single uppercase letter)"),
+    model_id: str = typer.Argument(..., help="Model identifier"),
+    role: str = typer.Option("reviewer", "--role", "-r", help="Role: primary/reviewer/specialist/architect"),
+    ceiling: str = typer.Option("local", "--ceiling", "-c", help="Scope ceiling: atomic/local/regional/global"),
+    notes: str = typer.Option("", "--notes", "-n", help="Notes about this model"),
+    path: Optional[Path] = typer.Option(None, "--path", "-p"),
+):
+    """Add a model to the roster."""
+    env = _get_env(path)
+
+    sigil = sigil.upper()
+    if len(sigil) != 1 or not sigil.isalnum():
+        console.print("[red]Sigil must be a single alphanumeric character.[/red]")
+        raise typer.Exit(1)
+
+    if role not in VALID_ROLES:
+        console.print(f"[red]Invalid role '{role}'. Must be one of: {', '.join(sorted(VALID_ROLES))}[/red]")
+        raise typer.Exit(1)
+
+    if ceiling not in VALID_CEILINGS:
+        console.print(f"[red]Invalid ceiling '{ceiling}'. Must be one of: {', '.join(sorted(VALID_CEILINGS))}[/red]")
+        raise typer.Exit(1)
+
+    # Read current roster
+    current = read_roster(env)
+    entries = list(current.entries) if current else []
+    old_id = current.blink_id if current else None
+
+    # Check for duplicate sigil
+    for entry in entries:
+        if entry.sigil == sigil:
+            console.print(f"[red]Sigil '{sigil}' already exists in roster.[/red]")
+            raise typer.Exit(1)
+
+    # Add new entry
+    entries.append(RosterEntry(
+        sigil=sigil,
+        model_id=model_id,
+        role=role,
+        scope_ceiling=ceiling,
+        notes=notes,
+    ))
+
+    new_roster = update_roster(env, entries, old_roster_id=old_id)
+    console.print(f"\n  [green]\u2192[/green] Added {sigil} ({model_id}) to roster.")
+    console.print(f"    Role: {role}, Ceiling: {ceiling}")
+    console.print(f"    Roster blink: {new_roster.blink_id}\n")
+
+
+# ============================================================
+# bss roster-remove
+# ============================================================
+
+
+@app.command(name="roster-remove")
+def roster_remove(
+    sigil: str = typer.Argument(..., help="Author sigil to remove"),
+    path: Optional[Path] = typer.Option(None, "--path", "-p"),
+):
+    """Remove a model from the roster."""
+    env = _get_env(path)
+
+    sigil = sigil.upper()
+
+    current = read_roster(env)
+    if current is None:
+        console.print("[red]No roster found.[/red]")
+        raise typer.Exit(1)
+
+    entry = current.get_entry(sigil)
+    if entry is None:
+        console.print(f"[red]Sigil '{sigil}' not found in roster.[/red]")
+        raise typer.Exit(1)
+
+    confirm = typer.confirm(
+        f"  Remove {sigil} ({entry.model_id}) from roster?",
+        default=False,
+    )
+    if not confirm:
+        console.print("  Cancelled.")
+        return
+
+    new_entries = [e for e in current.entries if e.sigil != sigil]
+    new_roster = update_roster(env, new_entries, old_roster_id=current.blink_id)
+    console.print(f"\n  [green]\u2192[/green] Removed {sigil} ({entry.model_id}) from roster.")
+    console.print(f"    Roster blink: {new_roster.blink_id}\n")
+
+
+# ============================================================
+# bss roster-update
+# ============================================================
+
+
+@app.command(name="roster-update")
+def roster_update_cmd(
+    sigil: str = typer.Argument(..., help="Author sigil to update"),
+    model: Optional[str] = typer.Option(None, "--model", "-m", help="New model identifier"),
+    role: Optional[str] = typer.Option(None, "--role", "-r", help="New role"),
+    ceiling: Optional[str] = typer.Option(None, "--ceiling", "-c", help="New scope ceiling"),
+    notes: Optional[str] = typer.Option(None, "--notes", "-n", help="New notes"),
+    path: Optional[Path] = typer.Option(None, "--path", "-p"),
+):
+    """Update a model's roster entry."""
+    env = _get_env(path)
+
+    sigil = sigil.upper()
+
+    current = read_roster(env)
+    if current is None:
+        console.print("[red]No roster found.[/red]")
+        raise typer.Exit(1)
+
+    entry = current.get_entry(sigil)
+    if entry is None:
+        console.print(f"[red]Sigil '{sigil}' not found in roster.[/red]")
+        raise typer.Exit(1)
+
+    if role is not None and role not in VALID_ROLES:
+        console.print(f"[red]Invalid role '{role}'. Must be one of: {', '.join(sorted(VALID_ROLES))}[/red]")
+        raise typer.Exit(1)
+
+    if ceiling is not None and ceiling not in VALID_CEILINGS:
+        console.print(f"[red]Invalid ceiling '{ceiling}'. Must be one of: {', '.join(sorted(VALID_CEILINGS))}[/red]")
+        raise typer.Exit(1)
+
+    # Apply updates
+    new_entries = []
+    for e in current.entries:
+        if e.sigil == sigil:
+            new_entries.append(RosterEntry(
+                sigil=sigil,
+                model_id=model if model is not None else e.model_id,
+                role=role if role is not None else e.role,
+                scope_ceiling=ceiling if ceiling is not None else e.scope_ceiling,
+                notes=notes if notes is not None else e.notes,
+            ))
+        else:
+            new_entries.append(e)
+
+    new_roster = update_roster(env, new_entries, old_roster_id=current.blink_id)
+    console.print(f"\n  [green]\u2192[/green] Updated {sigil} in roster.")
+    console.print(f"    Roster blink: {new_roster.blink_id}\n")
+
+
+# ============================================================
+# bss roster-config
+# ============================================================
+
+
+@app.command(name="roster-config")
+def roster_config(
+    sigil: str = typer.Argument(..., help="Author sigil to generate config for"),
+    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output file (default: stdout)"),
+    path: Optional[Path] = typer.Option(None, "--path", "-p"),
+):
+    """Generate model configuration (CLAUDE.md-style) for a roster member."""
+    env = _get_env(path)
+
+    sigil = sigil.upper()
+
+    current = read_roster(env)
+    if current is None:
+        console.print("[red]No roster found.[/red]")
+        raise typer.Exit(1)
+
+    try:
+        config = generate_model_config(current, sigil, env)
+    except ValueError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(1)
+
+    if output:
+        output.write_text(config, encoding="utf-8")
+        console.print(f"\n  [green]\u2192[/green] Config written to {output}\n")
+    else:
+        console.print()
+        console.print(config)
+        console.print()
+
+
+# ============================================================
+# bss relay
+# ============================================================
+
+
+@app.command()
+def relay(
+    path: Optional[Path] = typer.Argument(None, help="BSS environment path (default: current)"),
+    setup: bool = typer.Option(False, "--setup", help="Run model setup wizard (opens in TUI)"),
+):
+    """Launch the BSS relay terminal interface."""
+    from terminal.app import BSSRelayApp
+    BSSRelayApp(path or Path.cwd(), force_setup=setup).run()
 
 
 if __name__ == "__main__":

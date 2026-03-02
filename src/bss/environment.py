@@ -184,6 +184,35 @@ class BSSEnvironment:
 
         return None
 
+    def find_blink_by_prefix(self, prefix: str) -> Path | None:
+        """Search all directories for a blink whose filename starts with prefix.
+
+        Searches relay → active → profile → archive (recursive) using glob.
+
+        Args:
+            prefix: The prefix to match (e.g. "00001A" for 6-char or "00001" for 5-char).
+
+        Returns:
+            Path to the first matching blink file, or None if not found.
+        """
+        pattern = f"{prefix}*.md"
+
+        # Search in order: relay, active, profile
+        for dirname in ["relay", "active", "profile"]:
+            dir_path = self.root / dirname
+            if dir_path.exists():
+                matches = sorted(dir_path.glob(pattern))
+                if matches:
+                    return matches[0]
+
+        # Search archive recursively
+        if self.archive_dir.exists():
+            matches = sorted(self.archive_dir.rglob(pattern))
+            if matches:
+                return matches[0]
+
+        return None
+
     def move_blink(self, blink_id: str, to_directory: str) -> Path:
         """Move a blink between directories.
 
@@ -317,6 +346,16 @@ class BSSEnvironment:
         import shutil
         shutil.copy2(filepath, dest)
         return dest
+
+    def list_artifacts(self) -> list[Path]:
+        """Return sorted list of artifact files in /artifacts/.
+
+        Returns:
+            Sorted list of file Paths in the artifacts directory.
+        """
+        if not self.artifacts_dir.exists():
+            return []
+        return sorted(f for f in self.artifacts_dir.iterdir() if f.is_file())
 
 
 # ============================================================

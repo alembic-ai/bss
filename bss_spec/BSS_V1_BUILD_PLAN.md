@@ -19,7 +19,7 @@ Each level builds on the last. Don't skip ahead. The blinks you write along the 
 ```
 bss/
 ├── bss_spec/
-│   ├── BSS_SPEC_v3.0.md
+│   ├── BSS_SPEC_v1.md
 │   └── MODULE_8_TESTS.md
 ├── src/
 │   └── bss/
@@ -45,7 +45,7 @@ bss/
 # BSS Reference Implementation
 
 You are building the reference implementation of the Blink Sigil System.
-Read bss_spec/BSS_SPEC_v3.0.md for the full protocol specification.
+Read bss_spec/BSS_SPEC_v1.md for the full protocol specification.
 Read bss_spec/MODULE_8_TESTS.md for canonical test cases.
 
 ## Key Rules
@@ -65,7 +65,7 @@ Read bss_spec/MODULE_8_TESTS.md for canonical test cases.
 
 0.3 — Hand-write the first two blinks:
 
-**Origin blink** → `/active/00001U~~^!!^;,!=.md`
+**Origin blink** → `/active/00001U~~^!!^;!,=.md`
 
 ```markdown
 Born from: Origin
@@ -77,12 +77,12 @@ a working Python implementation with CLI tooling, tested against the canonical
 Module 8 test suite, with the build process itself as the first real-world
 BSS archive.
 
-Lineage: 00001U~~^!!^;,!=.
+Lineage: 00001U~~^!!^;!,=.
 
 Links:
 ```
 
-Reading: Blink 1, User-authored, idle, origin, high confidence, clarity, system + documenting, global scope, seed maturity, complete + passive urgency.
+Reading: Blink 1, User-authored, idle, origin, high confidence, clarity, system + documenting, global scope, seed maturity, normal + passive urgency.
 
 **Roster blink** → `/profile/00002S~~^!!^;.!=.md`
 
@@ -96,7 +96,7 @@ U | Cam | architect | global | Protocol designer. Reviews, directs, and makes fi
 
 Lineage: 00002S~~^!!^;.!=.
 
-Links: 00001U~~^!!^;,!=.
+Links: 00001U~~^!!^;!,=.
 ```
 
 0.4 — `git init`, first commit: "Origin — BSS bootstraps itself"
@@ -203,7 +203,7 @@ Links: 00001U~~^!!^;,!=.
 
 - `get_generation(env: BSSEnvironment, blink_id: str) -> int` — Walks the Born from chain to determine which generation a blink is in (1-7).
 - `needs_convergence(env: BSSEnvironment, blink_id: str) -> bool` — Returns True if the blink is generation 7 and the next write must converge.
-- `converge(env: BSSEnvironment, chain: list[BlinkFile], summary: str) -> BlinkFile` — Writes a convergence blink (relational <) synthesizing the chain. Resets generation to 1. Moves key references to Links.
+- `converge(env: BSSEnvironment, chain: list[BlinkFile], summary: str) -> BlinkFile` — Writes a convergence blink (relational {) synthesizing the chain. Resets generation to 1. Moves key references to Links.
 
 3.3 — `src/bss/roster.py` — Roster management:
 
@@ -270,7 +270,7 @@ Interactive setup flow:
 $ bss init
 
   ╔══════════════════════════════════════╗
-  ║   BLINK SIGIL SYSTEM — v2.0         ║
+  ║   BLINK SIGIL SYSTEM — v1.0         ║
   ║   Alembic AI                        ║
   ╚══════════════════════════════════════╝
 
@@ -312,7 +312,7 @@ $ bss init
 $ bss status
 
   BSS Environment: /home/cam/projects/my-project
-  Spec version: 2.0
+  Spec version: 1.0
   Total blinks: 47
 
   /relay/   3 blinks  (1 handoff, 1 error, 1 blocked)
@@ -324,7 +324,7 @@ $ bss status
   Active threads: 4
   Error chains needing attention: 1
 
-  Latest blink: 0002FA~!>!^#!=~^=
+  Latest blink: 0002FA~!}!^#!=~^=
     → Handoff from Model A | Work + Making | High priority
 ```
 
@@ -352,20 +352,20 @@ $ bss write
     4. Merging threads
     ...
   Select [2]: 2
-  Parent blink ID: 00015A.!+!=!=;!~^=
+  Parent blink ID: 00015A.!+!=#;!~^=
 
   [continues through confidence, cognitive, domain, etc.]
 
   Preview:
-    ID: 00030U.!+!=!#!=~^=
-    Reading: Blink 30, User, in progress, continuation, high confidence,
+    ID: 00030U.!+!=#!=~^=
+    Reading: Blink 108, User, in progress, continuation, high confidence,
              clarity, work + making, regional scope, in progress, high + whenever
 
   Summary (2-5 sentences):
   > Implemented the CLI scaffolding with typer. All core commands are stubbed...
 
   Write this blink? [Y/n]: Y
-  → Written to /active/00030U.!+!=!#!=~^=.md
+  → Written to /active/00030U.!+!=#!=~^=.md
 ```
 
 4.5 — `bss triage` — Relay queue viewer:
@@ -375,27 +375,27 @@ $ bss triage
 
   /relay/ — 3 blinks (triage order):
 
-  1. !! 00028A!!+~%#-=!!  ERROR | Critical + Blocking
+  1. !! 00028A!!+~%#-=-!!  ERROR | Critical + Blocking
      → "Parser failed on edge case with consecutive special chars..."
 
-  2. ~! 0002FA~!>!^#!=~!^ HANDOFF | Critical + Soon
+  2. ~! 0002FA~!}!^#!=~!^ HANDOFF | Critical + Soon
      → "Validator complete, needs integration with file writer..."
 
-  3. ~! 00025B~!+.=#~;.^= HANDOFF | High + Whenever
+  3. ~! 00025B~!+.=#~=.^= HANDOFF | High + Whenever
      → "Roster reader working but needs multi-roster history support..."
 ```
 
 4.6 — `bss describe` — Human-readable blink breakdown:
 
 ```
-$ bss describe 0002FA~!>!^#!=~^=
+$ bss describe 0002FA~!}!^#!=~^=
 
-  Blink ID: 0002FA~!>!^#!=~^=
+  Blink ID: 0002FA~!}!^#!=~^=
 
-  Sequence:    0002F (95 in decimal)
+  Sequence:    0002F (87 in decimal)
   Author:      A (Model A)
   Action:      ~! (Handoff — pick this up)
-  Relational:  > (Branch — new thread from existing parent)
+  Relational:  } (Branch — new thread from existing parent)
   Confidence:  ! (High)
   Cognitive:   ^ (Breakthrough)
   Domain:      # (Work)
@@ -416,7 +416,7 @@ $ bss describe 0002FA~!>!^#!=~^=
 $ bss log --last 5
 
   00030  U  .!  +  /active/   Work + Making      "Implemented CLI scaffolding..."
-  0002F  A  ~!  >  /relay/    Work + Making       "Validator complete, needs..."
+  0002F  A  ~!  }  /relay/    Work + Making       "Validator complete, needs..."
   0002E  A  .!  +  /active/   Work + Fixing       "Fixed edge case in base36..."
   0002D  B  ~.  +  /archive/  Learning + Explore  "Research on click vs typer..."
   0002C  A  !!  +  /relay/    Work + Fixing        "Parser failed on consec..."
@@ -425,15 +425,15 @@ $ bss log --last 5
 4.8 — `bss tree` — Lineage visualization:
 
 ```
-$ bss tree 00030U.!+!=!#!=~^=
+$ bss tree 00030U.!+!=#!=~^=
 
-  00001U~~^!!^;,!=.  (Origin — project bootstrap)
-    └─+ 00005A.!+!=!#!-,^=  (Identifier module started)
-      └─+ 0000AA.!+!=!#!-~~=  (Parser core logic)
-        ├─> 0000FA~!>!^#!=~^=  (Validator branched off)
-        └─+ 00015A.!+!=!#!=~~=  (Generator added)
-          └─+ 00020A.!+!=!#!=~^=  (CLI integration)
-            └─+ 00030U.!+!=!#!=~^=  ← YOU ARE HERE
+  00001U~~^!!^;!,=.  (Origin — project bootstrap)
+    └─+ 00005A.!+!=#!-,^=  (Identifier module started)
+      └─+ 0000AA.!+!=#!-~~=  (Parser core logic)
+        ├─} 0000FA~!}!^#!=~^=  (Validator branched off)
+        └─+ 00015A.!+!=#!=~~=  (Generator added)
+          └─+ 00020A.!+!=#!=~^=  (CLI integration)
+            └─+ 00030U.!+!=#!=~^=  ← YOU ARE HERE
 ```
 
 4.9 — Package configuration:

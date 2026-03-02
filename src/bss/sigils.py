@@ -36,8 +36,8 @@ ACTION_VALENCE: dict[str, str] = {
 # Position 9: Relational Role
 RELATIONAL: dict[str, str] = {
     "^": "Origin / seed",
-    ">": "Branch / divergence",
-    "<": "Convergence / synthesis",
+    "}": "Branch / divergence",
+    "{": "Convergence / synthesis",
     "#": "Contradiction / conflict",
     "=": "Reinforcement / echo",
     "_": "Dead end / dormant",
@@ -143,22 +143,6 @@ VALID_CHARS: dict[str, set[str]] = {
     "sensitivity": set(SENSITIVITY.keys()),
 }
 
-# All sigil maps keyed by position name for programmatic access
-SIGIL_MAPS: dict[str, dict[str, str]] = {
-    "action_state": ACTION_STATES,
-    "energy": ACTION_ENERGY,
-    "valence": ACTION_VALENCE,
-    "relational": RELATIONAL,
-    "confidence": CONFIDENCE,
-    "cognitive": COGNITIVE,
-    "domain": DOMAIN,
-    "subdomain": SUBDOMAIN,
-    "scope": SCOPE,
-    "maturity": MATURITY,
-    "priority": PRIORITY,
-    "sensitivity": SENSITIVITY,
-}
-
 
 def describe(blink_id: str) -> str:
     """Produce a plain-English reading of a blink ID.
@@ -174,7 +158,6 @@ def describe(blink_id: str) -> str:
 
     meta = parse(blink_id)
     action_compound = meta.action_energy + meta.action_valence
-    urgency_compound = meta.priority + meta.sensitivity
 
     lines = [
         f"Blink ID: {blink_id}",

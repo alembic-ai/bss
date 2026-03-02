@@ -277,7 +277,7 @@ class TestGenerationCap:
         )
 
         meta = parse_id(conv.blink_id)
-        assert meta.relational == "<"  # Convergence
+        assert meta.relational == "{"  # Convergence
         assert conv.born_from == [blink.blink_id]
         assert len(conv.lineage) == 1  # New chain starts
         assert conv.lineage[0] == conv.blink_id

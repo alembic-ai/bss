@@ -212,3 +212,91 @@ def check_scope_compliance(
     blink_rank = SCOPE_CEILING_RANK.get(blink_scope, 0)
 
     return blink_rank <= ceiling_rank
+
+
+def generate_model_config(
+    roster: Roster,
+    sigil: str,
+    env: BSSEnvironment,
+) -> str:
+    """Generate a CLAUDE.md-style instruction block for a model.
+
+    Covers directory structure, author sigil, role, scope ceiling,
+    blink grammar summary, action states, current roster, and relay state.
+
+    Args:
+        roster: The current roster.
+        sigil: The author sigil to generate config for.
+        env: The BSS environment.
+
+    Returns:
+        A string containing the model configuration instructions.
+    """
+    entry = roster.get_entry(sigil)
+    if entry is None:
+        raise ValueError(f"Sigil '{sigil}' not found in roster")
+
+    # Gather relay state
+    relay_count = env.relay_count()
+
+    # Build roster summary
+    roster_lines = []
+    for e in roster.entries:
+        marker = " <-- you" if e.sigil == sigil else ""
+        roster_lines.append(
+            f"- {e.sigil}: {e.model_id} ({e.role}, {e.scope_ceiling}){marker}"
+        )
+
+    lines = [
+        "# BSS Model Configuration",
+        "",
+        "You are a BSS relay member. Follow the Blink Sigil System protocol.",
+        "",
+        "## Your Identity",
+        f"- Author sigil: {entry.sigil}",
+        f"- Model: {entry.model_id}",
+        f"- Role: {entry.role}",
+        f"- Scope ceiling: {entry.scope_ceiling}",
+        "",
+        "## Directory Structure",
+        "- /relay/ — handoff blinks between models (read first)",
+        "- /active/ — work-in-progress blinks",
+        "- /profile/ — roster and configuration blinks",
+        "- /archive/ — completed/historical blinks",
+        "- /artifacts/ — produced files linked to blinks",
+        "",
+        "## Blink Grammar",
+        "Blink IDs are exactly 17 characters:",
+        "  Positions 1-5: Base-36 sequence (00001-ZZZZZ)",
+        "  Position 6: Author sigil (A-Z, 0-9)",
+        "  Positions 7-8: Action state (energy + valence)",
+        "  Position 9: Relational role (^ origin, + continuation, { convergence)",
+        "  Position 10: Confidence (! high, . moderate, ~ low)",
+        "  Position 11: Cognitive state",
+        "  Position 12-13: Domain + subdomain",
+        "  Position 14: Scope (. atomic, - local, = regional, ! global)",
+        "  Position 15: Maturity",
+        "  Positions 16-17: Priority + sensitivity",
+        "",
+        "## Action States",
+        "  ~! Handoff  |  .! In progress  |  ~. Completed",
+        "  !! Error    |  !~ Blocked      |  ~~ Idle",
+        "  !. Decision |  .~ Awaiting     |  .. Informational",
+        "",
+        "## Current Roster",
+        *roster_lines,
+        "",
+        "## Relay State",
+        f"- Blinks in /relay/: {relay_count}",
+        f"- Next sequence: {env.next_sequence()}",
+        "",
+        "## Rules",
+        "- Read /relay/ at session start. Write a handoff blink at session end.",
+        "- Blinks are immutable. Never modify, rename, or delete.",
+        f"- Your scope ceiling is {entry.scope_ceiling}. Do not write blinks above this scope.",
+        "- Summaries: 2-5 sentences. No blink IDs in summaries.",
+        "- Generation cap: 7. Converge (relational {) before exceeding.",
+    ]
+
+    return "\n".join(lines)
+

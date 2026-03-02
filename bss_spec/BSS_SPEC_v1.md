@@ -1,10 +1,12 @@
 # The Blink Sigil System — Protocol Specification
 
-### Version 2.0 Draft
+### Version 1.0
 
 **Author:** Alembic AI
-**Status:** Draft
+**Status:** Stable
 **License:** CC BY 4.0
+
+> **Note:** The specification version (v1.0) and implementation version (v1.0.0) are independent. The spec version reflects the protocol design; the implementation version tracks the reference codebase.
 
 ---
 
@@ -20,7 +22,7 @@ This specification is organized into ten modules, a canonical test suite, and ap
 - **Module 9** defines versioning and evolution policy.
 - **Module 10** documents acknowledged future scope and expansion areas.
 
-The Gardener — an intelligence and maintenance layer for BSS environments — is defined in a separate companion document (BSS-GARDENER-v1.0). It is not required for BSS compliance but is recommended for sustained, high-volume deployments.
+The Gardener — an intelligence and maintenance layer for BSS environments — is planned as a future companion specification (BSS-GARDENER). It is not required for BSS compliance but is recommended for sustained, high-volume deployments.
 
 ---
 
@@ -100,7 +102,7 @@ BSS may be used alongside any of these systems. It is designed to complement, no
 
 **Receiver:** The agent that reads a blink during triage or relay intake. Any model entering the environment is a receiver until it writes its own blink.
 
-**Gardener:** An optional maintenance agent (defined in the companion specification BSS-GARDENER) that tends the blink graph over time. Not part of the core protocol.
+**Gardener:** An optional maintenance agent (planned as a future companion specification, BSS-GARDENER) that tends the blink graph over time. Not part of the core protocol.
 
 ### 1.3 — State Terms
 
@@ -206,7 +208,7 @@ ACTION        := ENERGY VALENCE
 ENERGY        := '!' | '.' | '~'
 VALENCE       := '!' | '.' | '~' | '#'
 
-RELATIONAL    := '^' | '>' | '<' | '#' | '=' | '_' | '+'
+RELATIONAL    := '^' | '}' | '{' | '#' | '=' | '_' | '+'
 
 CONFIDENCE    := '!' | '.' | '~' | ','
 
@@ -292,8 +294,8 @@ Describes this blink's structural position within the graph.
 | Sigil | Meaning | Graph Implication |
 |-------|---------|-------------------|
 | `^` | Origin / seed | Root node. Has no parent. `Born from` field reads "Origin". |
-| `>` | Branch / divergence | Creates a new thread from an existing parent. |
-| `<` | Convergence / synthesis | Merges insights from multiple parent threads. |
+| `}` | Branch / divergence | Creates a new thread from an existing parent. |
+| `{` | Convergence / synthesis | Merges insights from multiple parent threads. |
 | `#` | Contradiction / conflict | Disagrees with or challenges a parent blink. |
 | `=` | Reinforcement / echo | Supports or confirms a related blink. |
 | `_` | Dead end / dormant | Thread terminated. No continuation expected. |
@@ -442,7 +444,7 @@ Where `BLINK_ID` is exactly 17 characters conforming to the grammar in Section 3
 Example:
 
 ```
-0002FA~!>!^#!=~^=.md
+0002FA~!}!^#!=~^=.md
 │    │ │ │││  ││ ││
 │    │ │ │││  ││ │└─ Position 17: Time Sensitivity (= Whenever)
 │    │ │ │││  ││ └── Position 16: Priority (^ High)
@@ -452,13 +454,13 @@ Example:
 │    │ │ │└───────── Position 12: Domain (# Work)
 │    │ │ └────────── Position 11: Cognitive (^ Breakthrough)
 │    │ │              Position 10: Confidence (! High)
-│    │ └──────────── Position 9:  Relational (> Branch)
+│    │ └──────────── Position 9:  Relational (} Branch)
 │    └────────────── Positions 7-8: Action (~! Handoff)
 │                     Position 6:  Author (A)
 └─────────────────── Positions 1-5: Sequence (0002F)
 ```
 
-Plain language: Blink 95 (0002F in base-36), authored by Model A, is a handoff. It branches from an existing thread. The model was highly confident and had a breakthrough. This is about building something in the work domain, at regional scope, still in progress. High priority but no hard deadline.
+Plain language: Blink 87 (0002F in base-36), authored by Model A, is a handoff. It branches from an existing thread. The model was highly confident and had a breakthrough. This is about building something in the work domain, at regional scope, still in progress. High priority but no hard deadline.
 
 ### 3.5 — Validation Rules
 
@@ -547,7 +549,7 @@ Specifies the parent blink(s) that directly gave rise to this blink.
 
 - For origin blinks (relational sigil `^`): the value MUST be the string `Origin`.
 - For all other blinks: the value MUST be one or more valid blink IDs, pipe-separated (`|`) if multiple.
-- A blink with relational sigil `<` (convergence) SHOULD have multiple parents.
+- A blink with relational sigil `{` (convergence) SHOULD have multiple parents.
 - A blink with relational sigil `+` (continuation) SHOULD have exactly one parent.
 
 #### Summary (REQUIRED)
@@ -798,8 +800,8 @@ A lineage chain — a sequence of blinks connected through `Born from` reference
 **The generation rule:**
 
 1. An origin blink (`^` relational sigil) is generation 1.
-2. Each subsequent continuation (`+`) or branch (`>`) increments the generation count.
-3. At generation 7, the next model in the thread MUST write a convergence blink (`<` relational sigil) instead of a continuation.
+2. Each subsequent continuation (`+`) or branch (`}`) increments the generation count.
+3. At generation 7, the next model in the thread MUST write a convergence blink (`{` relational sigil) instead of a continuation.
 
 **What a convergence blink does:**
 
@@ -818,7 +820,7 @@ The convergence blink becomes generation 1 of a new chain. The cycle repeats. Th
 
 ```
 Generation:  1 → 2 → 3 → 4 → 5 → 6 → 7 → CONVERGE → 1 → 2 → ...
-Relational:  ^   +   +   +   +   +   +      <          +   +   ...
+Relational:  ^   +   +   +   +   +   +      {          +   +   ...
 ```
 
 **Rationale:** Without forced convergence, lineage chains grow unbounded. A model entering a thread 50 generations deep would need to walk backwards through dozens of blinks to build context. The 7-generation cap ensures that any active thread is at most 7 hops from a synthesis point. The convergence blink acts as a checkpoint — a compressed summary of everything that came before, with links back to the full history for anyone who needs it.
@@ -932,7 +934,7 @@ Over time, a BSS environment develops emergent structural properties. These are 
 
 ### 6.5 — Lineage Divergence
 
-**Definition:** A single origin blink that spawns multiple branch (`>`) children which evolve in different thematic directions.
+**Definition:** A single origin blink that spawns multiple branch (`}`) children which evolve in different thematic directions.
 
 **Observable indicators:**
 
@@ -957,7 +959,7 @@ Over time, a BSS environment develops emergent structural properties. These are 
 
 **Observable indicators:**
 
-- Alternating sequences of continuation (`+`) blinks and convergence (`<`) blinks at regular intervals.
+- Alternating sequences of continuation (`+`) blinks and convergence (`{`) blinks at regular intervals.
 - Convergence blinks whose summaries are notably denser and more synthesized than their predecessors.
 - `Links` fields on convergence blinks referencing the chain they summarized.
 
@@ -1013,20 +1015,20 @@ Requires BSS Relay, plus:
 The following blink identifiers are VALID and MUST be parsed correctly by any conformant implementation:
 
 ```
-00001A~~^!!=~;,~.    — First blink, Model A, idle, origin, high confidence
-0002FB~!>!^#!=~^=    — Blink 95, Model B, handoff, branch, breakthrough
-00ZZZU..+.=@&.!..    — User blink, informational, continuation, self-analysis
-0000SA~.+=.^~-!!!    — System blink, completed, continuation, in-progress learning
+00001A~~^!!#;=,~.    — First blink, Model A, idle, origin, high confidence, clarity, work+documenting, regional, seed, background+passive
+0002NB~!}!^#!=~^=    — Blink 95, Model B, handoff, branch, high confidence, breakthrough, work+making, regional, in progress, high+whenever
+00ZZZU..+.=@&.!..    — User blink, informational, continuation, moderate confidence, flow, self+analyzing, atomic, complete, low+passive
+0000SA~.+.^~-!!!!    — Blink with S-prefixed sequence, Model A, completed, continuation, moderate, breakthrough, learning+fixing, global, complete, critical+blocking
 ```
 
 The following blink identifiers are INVALID and MUST be rejected:
 
 ```
-0001A~~^!!=~;,~.     — 16 characters (too short, missing 5th sequence digit)
-00001A~~^!!=~;,~..   — 18 characters (too long)
-00001a~~^!!=~;,~.    — Lowercase in sequence (position 1-5 must be uppercase)
-000010~?^!!=~;,~.    — Invalid action state ~? (position 7-8)
-00001A~~*!!=~;,~.    — Invalid relational sigil * (position 9)
+0001A~~^!!#;=,~.     — 16 characters (too short, missing 5th sequence digit)
+00001A~~^!!#;=,~..   — 18 characters (too long)
+00001a~~^!!#;=,~.    — Lowercase in sequence (positions 1-5 must be uppercase)
+000010~?^!!#;=,~.    — Invalid action state ~? (position 7-8)
+00001A~~*!!#;=,~.    — Invalid relational sigil * (position 9)
 ```
 
 ### 8.2 — Relay Tests (BSS Relay)
@@ -1055,15 +1057,15 @@ The following scenarios define the canonical test cases for BSS Relay compliance
 
 ```
 00005A~!=.=#~-~^=    — Sequence 5, urgency ^= (High + Whenever)
-00003B~!+!=#!==!!    — Sequence 3, urgency !! (Critical + Blocking)
-00007A~!>.=^;^~!^    — Sequence 7, urgency !^ (Critical + Soon)
+00003B~!+!=#!=!!!    — Sequence 3, urgency !! (Critical + Blocking)
+00007A~!}.=#;=~!^    — Sequence 7, urgency !^ (Critical + Soon)
 ```
 
 **Test:** A model enters the environment and triages `/relay/`.
 
 **Expected:** Processing order is:
-1. `00003B~!+!=#!==!!` — Critical + Blocking (highest urgency)
-2. `00007A~!>.=^;^~!^` — Critical + Soon (same priority, higher time sensitivity than #3)
+1. `00003B~!+!=#!=!!!` — Critical + Blocking (highest urgency)
+2. `00007A~!}.=#;=~!^` — Critical + Soon (same priority, higher time sensitivity than #3)
 3. `00005A~!=.=#~-~^=` — High + Whenever (lower urgency)
 
 #### 8.2.4 — Triage Ordering (Urgency Tie — Recency Tiebreak)
@@ -1071,26 +1073,26 @@ The following scenarios define the canonical test cases for BSS Relay compliance
 **Precondition:** `/relay/` contains two blinks with identical urgency compounds:
 
 ```
-00010A~!+!=#!-~^=    — Sequence 10, urgency ^=
-00025B~!>!=#!-~^=    — Sequence 25, urgency ^=
+0000AA~!+!=#!-~^=    — Sequence 10, urgency ^=
+0000PB~!}!=#!-~^=    — Sequence 25, urgency ^=
 ```
 
 **Test:** A model triages `/relay/`.
 
-**Expected:** `00025B~!>!=#!-~^=` is processed first (higher sequence number = more recent). Recency is the second tiebreaker after urgency.
+**Expected:** `0000PB~!}!=#!-~^=` is processed first (higher sequence number = more recent). Recency is the second tiebreaker after urgency.
 
 #### 8.2.5 — Triage Ordering (Urgency + Recency Tie — Scope Tiebreak)
 
 **Precondition:** `/relay/` contains two blinks with identical urgency and adjacent sequences (identical sequences are impossible under serial write):
 
 ```
-00010A~!+!=#!=~^=    — Sequence 10, urgency ^=, scope = (Regional)
-00011B~!>!=#!!~^=    — Sequence 11, urgency ^=, scope ! (Global)
+0000AA~!+!=#!=~^=    — Sequence 10, urgency ^=, scope = (Regional)
+0000BB~!}!=#!!~^=    — Sequence 11, urgency ^=, scope ! (Global)
 ```
 
 **Test:** A model triages `/relay/`.
 
-**Expected:** Recency takes precedence over scope (second tiebreaker before third). `00011B~!>!=#!!~^=` is processed first. Scope is the third tiebreaker, used only when urgency and recency are equal — which cannot occur under serial write but may occur in edge cases involving collision resolution.
+**Expected:** Recency takes precedence over scope (second tiebreaker before third). `0000BB~!}!=#!!~^=` is processed first. Scope is the third tiebreaker, used only when urgency and recency are equal — which cannot occur under serial write but may occur in edge cases involving collision resolution.
 
 #### 8.2.6 — Relay Hygiene — Session Output Limit
 
@@ -1122,13 +1124,13 @@ The following scenarios define the canonical test cases for BSS Relay compliance
 
 #### 8.2.9 — Error Escalation Chain
 
-**Precondition:** `/relay/` contains an error blink `00050A!!+~%#-=!!` written by Model A. Model B enters, attempts resolution, and also fails.
+**Precondition:** `/relay/` contains an error blink `0001EA!!+~%#-=-!!` written by Model A. Model B enters, attempts resolution, and also fails.
 
 **Test:** Model B writes its own error blink.
 
 **Expected:**
 - Model B's blink has action state `!!`.
-- `Born from` references `00050A!!+~%#-=!!`.
+- `Born from` references `0001EA!!+~%#-=-!!`.
 - The summary documents Model B's failed attempt and any additional diagnosis.
 - Two consecutive linked `!!` blinks now exist — implementation SHOULD trigger user alerting.
 
@@ -1145,18 +1147,18 @@ The following scenarios define the canonical test cases for BSS Relay compliance
 **Precondition:** An active thread has reached generation 7:
 
 ```
-Gen 1: 00001A~~^!!=~;,~.    (origin, ^)
-Gen 2: 00005A.!+!=!=;!~^=   (continuation, +)
-Gen 3: 00010B.!+!=!=;!~^=   (continuation, +)
-Gen 4: 00015A.!+!=!=;!~^=   (continuation, +)
-Gen 5: 00020B.!+!=!=;!~^=   (continuation, +)
-Gen 6: 00025A.!+!=!=;!~^=   (continuation, +)
-Gen 7: 00030B.!+!=!=;!~^=   (continuation, +)
+Gen 1: 00001A~~^!!#;=,~.    (origin, ^)
+Gen 2: 00005A.!+!=#!=~^=    (continuation, +)
+Gen 3: 0000AB.!+!=#!=~^=    (continuation, +)
+Gen 4: 0000FA.!+!=#!=~^=    (continuation, +)
+Gen 5: 0000KB.!+!=#!=~^=    (continuation, +)
+Gen 6: 0000PA.!+!=#!=~^=    (continuation, +)
+Gen 7: 0000UB.!+!=#!=~^=    (continuation, +)
 ```
 
 **Test:** The next model continues work on this thread.
 
-**Expected:** The model writes a convergence blink (`<` relational sigil), NOT a continuation (`+`). The convergence blink's summary synthesizes the preceding 7 generations. The convergence blink becomes generation 1 of a new chain.
+**Expected:** The model writes a convergence blink (`{` relational sigil), NOT a continuation (`+`). The convergence blink's summary synthesizes the preceding 7 generations. The convergence blink becomes generation 1 of a new chain.
 
 #### 8.2.12 — Convergence Blink Quality
 
@@ -1165,7 +1167,7 @@ Gen 7: 00030B.!+!=!=;!~^=   (continuation, +)
 **Test:** The convergence blink is validated.
 
 **Expected:**
-- Relational sigil is `<` (convergence).
+- Relational sigil is `{` (convergence).
 - `Born from` references the generation 7 blink (and MAY reference earlier blinks).
 - Summary synthesizes cumulative outcome — not merely the last generation's summary.
 - `Lineage` begins a new chain starting from this blink.
@@ -1223,19 +1225,19 @@ The following scenarios define the canonical test cases for BSS Graph compliance
 
 #### 8.3.1 — Born From — Single Parent
 
-**Precondition:** Blink `00010A.!+!=!=;!~^=` is written as a continuation of `00005A~~^!!=~;,~.`.
+**Precondition:** Blink `0000AA.!+!=#!=~^=` is written as a continuation of `00005A.!+!=#!=~^=`.
 
 **Test:** The `Born from` field is validated.
 
-**Expected:** `Born from: 00005A~~^!!=~;,~.` — exactly one valid blink ID referencing the parent.
+**Expected:** `Born from: 00005A.!+!=#!=~^=` — exactly one valid blink ID referencing the parent.
 
 #### 8.3.2 — Born From — Multiple Parents (Convergence)
 
-**Precondition:** Blink `00020A.!<!=#!=~^=` is a convergence of threads led by `00010A.!+!=!=;!~^=` and `00015B.!+!=#!-~^=`.
+**Precondition:** Blink `0000KA.!{!=#!=~^=` is a convergence of threads led by `0000AA.!+!=#!=~^=` and `0000FB.!+!=#!-~^=`.
 
 **Test:** The `Born from` field is validated.
 
-**Expected:** `Born from: 00010A.!+!=!=;!~^= | 00015B.!+!=#!-~^=` — pipe-separated, multiple valid blink IDs. The relational sigil is `<` (convergence).
+**Expected:** `Born from: 0000AA.!+!=#!=~^= | 0000FB.!+!=#!-~^=` — pipe-separated, multiple valid blink IDs. The relational sigil is `{` (convergence).
 
 #### 8.3.3 — Born From — Origin
 
@@ -1250,16 +1252,16 @@ The following scenarios define the canonical test cases for BSS Graph compliance
 **Precondition:** A thread 5 generations deep:
 
 ```
-Gen 1: 00001A~~^!!=~;,~.
-Gen 2: 00005A.!+!=!=;!~^=
-Gen 3: 00010B.!+!=!=;!~^=
-Gen 4: 00015A.!+!=!=;!~^=
-Gen 5: 00020B.!+!=!=;!~^=
+Gen 1: 00001A~~^!!#;=,~.
+Gen 2: 00005A.!+!=#!=~^=
+Gen 3: 0000AB.!+!=#!=~^=
+Gen 4: 0000FA.!+!=#!=~^=
+Gen 5: 0000KB.!+!=#!=~^=
 ```
 
 **Test:** The `Lineage` field of the generation 5 blink is validated.
 
-**Expected:** `Lineage: 00001A~~^!!=~;,~. → 00005A.!+!=!=;!~^= → 00010B.!+!=!=;!~^= → 00015A.!+!=!=;!~^= → 00020B.!+!=!=;!~^=`
+**Expected:** `Lineage: 00001A~~^!!#;=,~. → 00005A.!+!=#!=~^= → 0000AB.!+!=#!=~^= → 0000FA.!+!=#!=~^= → 0000KB.!+!=#!=~^=`
 
 All ancestors present. Arrow separator is `→` (U+2192).
 
@@ -1273,23 +1275,23 @@ All ancestors present. Arrow separator is `→` (U+2192).
 
 #### 8.3.6 — Lineage — Origin Self-Reference
 
-**Precondition:** An origin blink `00001A~~^!!=~;,~.` is written.
+**Precondition:** An origin blink `00001A~~^!!#;=,~.` is written.
 
 **Test:** The `Lineage` field is validated.
 
-**Expected:** `Lineage: 00001A~~^!!=~;,~.` — self-reference only.
+**Expected:** `Lineage: 00001A~~^!!#;=,~.` — self-reference only.
 
 #### 8.3.7 — Links — Cross-Directory Resolution
 
-**Precondition:** Blink `00050A.!+!=!=;!~^=` in `/active/` has `Links: 00010B~._.=#~;.=.` where the linked blink resides in `/archive/`.
+**Precondition:** Blink `0001EA.!+!=#!=~^=` in `/active/` has `Links: 0000AB~._.=#~..=.` where the linked blink resides in `/archive/`.
 
 **Test:** The implementation attempts to resolve the link.
 
-**Expected:** The link resolves successfully. The implementation locates `00010B~._.=#~;.=.` in `/archive/` (or its subdirectories). The linked blink's content is accessible.
+**Expected:** The link resolves successfully. The implementation locates `0000AB~._.=#~..=.` in `/archive/` (or its subdirectories). The linked blink's content is accessible.
 
 #### 8.3.8 — Links — Cross-Directory Resolution Into Archive Subdirectories
 
-**Precondition:** `/archive/` is subdivided: `/archive/2026-Q1/` contains blink `00010B~._.=#~;.=.`. Blink `00050A.!+!=!=;!~^=` in `/active/` links to it.
+**Precondition:** `/archive/` is subdivided: `/archive/2026-Q1/` contains blink `0000AB~._.=#~..=.`. Blink `0001EA.!+!=#!=~^=` in `/active/` links to it.
 
 **Test:** The implementation resolves the link.
 
@@ -1297,13 +1299,13 @@ All ancestors present. Arrow separator is `→` (U+2192).
 
 #### 8.3.9 — Links — Broken Link Handling
 
-**Precondition:** Blink `00050A.!+!=!=;!~^=` has `Links: 00099X~!>!^#!=~^=` but no blink with ID `00099X~!>!^#!=~^=` exists in any directory.
+**Precondition:** Blink `0001EA.!+!=#!=~^=` has `Links: 0002RX~!}!^#!=~^=` but no blink with ID `0002RX~!}!^#!=~^=` exists in any directory.
 
 **Test:** The implementation attempts to resolve the link.
 
 **Expected:**
 - The broken reference is logged or noted.
-- The blink `00050A.!+!=!=;!~^=` is NOT treated as invalid.
+- The blink `0001EA.!+!=#!=~^=` is NOT treated as invalid.
 - The blink's own content (summary, other links, filename metadata) remains usable.
 - The implementation does NOT silently ignore the broken reference.
 
@@ -1362,7 +1364,7 @@ All ancestors present. Arrow separator is `→` (U+2192).
 
 #### 8.3.15 — Scope Ceiling Enforcement
 
-**Precondition:** Model B has scope ceiling `local` in the roster. Model B encounters blink `00050A~!=.=!!=!^=` with scope `!` (global).
+**Precondition:** Model B has scope ceiling `local` in the roster. Model B encounters blink `0001EA~!=.=!!!~^=` with scope `!` (global).
 
 **Test:** Model B processes the global-scope blink.
 
@@ -1370,7 +1372,7 @@ All ancestors present. Arrow separator is `→` (U+2192).
 
 #### 8.3.16 — Metadata-Content Contradiction Resolution
 
-**Precondition:** Blink `00050A!!+~%#-=!!` has action state `!!` (error) but its summary reads "Task completed successfully with no issues."
+**Precondition:** Blink `0001EA!!+~%#-=-!!` has action state `!!` (error) but its summary reads "Task completed successfully with no issues."
 
 **Test:** A model encounters this blink during triage.
 
@@ -1378,27 +1380,27 @@ All ancestors present. Arrow separator is `→` (U+2192).
 
 #### 8.3.17 — Dormant Reactivation via Link
 
-**Precondition:** Blink `00010A~._!=#~;.=.` in `/archive/` has relational sigil `_` (dormant). New work arrives in the same thematic territory.
+**Precondition:** Blink `0000AA~._!=#~..=.` in `/archive/` has relational sigil `_` (dormant). New work arrives in the same thematic territory.
 
 **Test:** A model reactivates the dormant thread.
 
 **Expected:**
-- The dormant blink `00010A~._!=#~;.=.` is NOT modified.
-- A new blink is written to `/active/` with a `Links` reference to `00010A~._!=#~;.=.`.
+- The dormant blink `0000AA~._!=#~..=.` is NOT modified.
+- A new blink is written to `/active/` with a `Links` reference to `0000AA~._!=#~..=.`.
 - The new blink's summary explains why the dormant thread has resurfaced.
 - The dormant blink retains its original content and location (or remains in `/archive/`).
 
 #### 8.3.18 — Immutability — Reject Rename
 
-**Precondition:** Blink `00050A.!+!=!=;!~^=.md` exists in `/active/`.
+**Precondition:** Blink `0001EA.!+!=#!=~^=.md` exists in `/active/`.
 
-**Test:** An operation attempts to rename the file to `00050A~.+!=!=;!~^=.md` (changing action state from `.!` to `~.`).
+**Test:** An operation attempts to rename the file to `0001EA~.+!=#!=~^=.md` (changing action state from `.!` to `~.`).
 
 **Expected:** The operation is rejected. The implementation MUST NOT permit renaming blink files. If state has changed, a new blink must be created.
 
 #### 8.3.19 — Immutability — Reject Content Edit
 
-**Precondition:** Blink `00050A.!+!=!=;!~^=.md` exists with a summary.
+**Precondition:** Blink `0001EA.!+!=#!=~^=.md` exists with a summary.
 
 **Test:** An operation attempts to modify the summary text within the file.
 
@@ -1406,7 +1408,7 @@ All ancestors present. Arrow separator is `→` (U+2192).
 
 #### 8.3.20 — Immutability — Permit Move
 
-**Precondition:** Blink `00050A~.+!=!=;!~^=.md` exists in `/active/`.
+**Precondition:** Blink `0001EA.!+!=#!=~^=.md` exists in `/active/`.
 
 **Test:** The blink is moved to `/archive/`.
 
@@ -1414,7 +1416,7 @@ All ancestors present. Arrow separator is `→` (U+2192).
 
 #### 8.3.21 — Blink ID Uniqueness Across Archive Subdivisions
 
-**Precondition:** `/archive/2026-Q1/` contains blink `00010B~._.=#~;.=..md`. An attempt is made to write a new blink with identifier `00010B~._.=#~;.=.` to `/archive/2026-Q2/`.
+**Precondition:** `/archive/2026-Q1/` contains blink `0000AB~._.=#~..=..md`. An attempt is made to write a new blink with identifier `0000AB~._.=#~..=.` to `/archive/2026-Q2/`.
 
 **Test:** The implementation checks for ID uniqueness.
 
@@ -1445,17 +1447,17 @@ The specification does not require blinks to indicate their spec version. Implem
 
 ## Module 10 — Future Scope & Expansion
 
-This module documents capabilities and extensions that are intentionally out of scope for BSS v2.0 but are acknowledged as future work. These items have been considered and deferred — they are not oversights.
+This module documents capabilities and extensions that are intentionally out of scope for BSS v1.0 but are acknowledged as future work. These items have been considered and deferred — they are not oversights.
 
 The core protocol (Modules 0-9) is designed to remain stable as these extensions are developed. BSS's filesystem-native, model-agnostic foundation supports all of the following without requiring changes to the blink identifier grammar or file format.
 
 ### 10.1 — The Gardener (Companion Specification)
 
-An intelligence and maintenance layer that watches the blink filesystem, maintains a search index (FTS5/SQLite), detects convergent evolution, creates cross-links, generates map blinks, and manages archive migration. Defined in a separate companion document (BSS-GARDENER). The Gardener is the recommended path for implementations that need semantic retrieval over blink summaries and automated graph maintenance at scale.
+An intelligence and maintenance layer that watches the blink filesystem, maintains a search index (FTS5/SQLite), detects convergent evolution, creates cross-links, generates map blinks, and manages archive migration. Planned as a future companion specification (BSS-GARDENER). The Gardener is the recommended path for implementations that need semantic retrieval over blink summaries and automated graph maintenance at scale.
 
 ### 10.2 — Network-Based Relay
 
-BSS v2.0 assumes a local or shared filesystem. Future extensions may define how the relay protocol operates over network-connected filesystems, cloud storage backends, or peer-to-peer file synchronization. The protocol's file-based nature makes it inherently compatible with any system that can sync files — git repositories, Syncthing, Dropbox, rsync — but formal guidance on conflict resolution, latency tolerance, and distributed sequence coordination is deferred.
+BSS v1.0 assumes a local or shared filesystem. Future extensions may define how the relay protocol operates over network-connected filesystems, cloud storage backends, or peer-to-peer file synchronization. The protocol's file-based nature makes it inherently compatible with any system that can sync files — git repositories, Syncthing, Dropbox, rsync — but formal guidance on conflict resolution, latency tolerance, and distributed sequence coordination is deferred.
 
 ### 10.3 — Inter-Environment Merging
 
@@ -1484,7 +1486,7 @@ Standardized formats for visual representation of the blink graph — force-dire
 All sigil characters used in blink identifiers are safe for use in filenames on Windows, macOS, and Linux. The following characters are explicitly excluded from the blink identifier symbol set by design:
 
 ```
-< > : " / \ | ? *
+: " / \ | ? *
 ```
 
 **Note on the pipe character (`|`):** The pipe is excluded from *filenames* (blink identifiers) because it is not safe in Windows filenames. However, it IS used as a separator *inside blink file contents* — in the `Born from`, `Links`, and roster fields. This is safe because file contents have no filesystem character restrictions. The pipe was chosen as the internal separator precisely because it cannot appear in a blink identifier, eliminating any parsing ambiguity.
@@ -1493,7 +1495,7 @@ The complete set of characters used by BSS:
 
 ```
 Alphanumeric:  0-9 A-Z
-Symbols:       ~ ! @ # $ % ^ & _ + - = ; , .
+Symbols:       ~ ! @ # $ % ^ & { } _ + - = ; , .
 ```
 
 ## Appendix B — Base-36 Sequence Reference
@@ -1511,7 +1513,7 @@ Symbols:       ~ ! @ # $ % ^ & _ + - = ; , .
 ## Appendix C — Quick Reference Card
 
 ```
-THE BLINK SIGIL SYSTEM — v2.0 QUICK REFERENCE
+THE BLINK SIGIL SYSTEM — v1.0 QUICK REFERENCE
 
 STRUCTURE (17 characters)
 [1-5] Sequence (base-36)  [6] Author  [7-8] Action  [9] Relational
@@ -1530,7 +1532,7 @@ ACTION       ~~ Idle      ~! Handoff   ~. Done      !~ Blocked
              !! Error     !. Decide    .! Progress   .. Info
              .~ User      !# Cancelled
 
-RELATIONAL   ^ Origin   > Branch    < Converge   # Conflict
+RELATIONAL   ^ Origin   } Branch    { Converge   # Conflict
              = Echo     _ Dormant   + Continue
 
 CONFIDENCE   ! High     . Moderate  ~ Low        , Speculative
@@ -1566,5 +1568,5 @@ Links: [related blink IDs, pipe-separated]
 *The Blink Sigil System is an Alembic AI protocol.*
 *Distilling AI coordination to its purest form.*
 
-*Specification version 2.0 — Draft*
+*Specification version 1.0 — Stable*
 *This document is licensed under CC BY 4.0.*

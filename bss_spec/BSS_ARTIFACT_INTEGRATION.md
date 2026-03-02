@@ -155,13 +155,13 @@ Unlike blinks, artifacts CAN be modified. However:
 The blink's summary references the artifact in natural language. Per Module 4.3 (layer separation), no structured artifact paths appear in the summary — just a natural mention:
 
 ```markdown
-Born from: 00025A.!+!=!#!-~~=
+Born from: 00025A.!+!=#!-~~=
 
 Built the first working version of the identifier parser. All base-36 encoding,
 positional sigil extraction, and full grammar validation are implemented. The
 nine test cases from Module 8.1 all pass. Artifact produced: the parser module.
 
-Lineage: 00001U~~^!!^;,!=. → 00005A.!+!=!#!-,^= → ... → 00030A.!+!=!#!=~^=
+Lineage: 00001U~~^!!^;!,=. → 00005A.!+!=#!-,^= → ... → 00030A.!+!=#!=~^=
 
 Links:
 ```
@@ -172,7 +172,7 @@ The artifact's filename carries the blink's sequence + author prefix, so the ass
 
 To find a blink's artifact:
 ```
-Given blink: 00030A.!+!=!#!=~^=
+Given blink: 00030A.!+!=#!=~^=
 Search /artifacts/ for files starting with: 00030A-
 Result: 00030A-identifier-parser.py
 ```
@@ -182,7 +182,7 @@ To find an artifact's blink:
 Given artifact: 00030A-identifier-parser.py
 Extract prefix: 00030A
 Search all blink directories for files starting with: 00030A
-Result: 00030A.!+!=!#!=~^=.md (in /active/)
+Result: 00030A.!+!=#!=~^=.md (in /active/)
 ```
 
 This bidirectional lookup requires no index, no database, and no additional metadata. The naming convention IS the link.
@@ -208,7 +208,7 @@ $ bss log --last 5
 
   00042  U  ..  +  System + Doc    "Wrote launch brief"       → 00042U-launch-brief.md
   00030  A  .!  +  Work + Making   "Built identifier parser"  → 00030A-identifier-parser.py
-  0002F  A  ~!  >  Work + Making   "Validator complete"
+  0002F  A  ~!  }  Work + Making   "Validator complete"
   0002E  A  .!  +  Work + Fixing   "Fixed base36 edge case"   → 0002EA-base36-fix.py
   0002D  B  ~.  +  Learn + Explore "Researched CLI frameworks"
 ```
@@ -228,14 +228,14 @@ $ bss status
 `bss tree` marks artifact-producing blinks:
 
 ```
-$ bss tree 00030A.!+!=!#!=~^=
+$ bss tree 00030A.!+!=#!=~^=
 
-  00001U~~^!!^;,!=.  (Origin)
-    └─+ 00005A.!+!=!#!-,^=  "Identifier module started"
-      └─+ 0000AA.!+!=!#!-~~=  "Parser core logic"  [artifact]
-        ├─> 0000FA~!>!^#!=~^=  "Validator branched"  [artifact]
-        └─+ 00015A.!+!=!#!=~~=  "Generator added"  [artifact]
-          └─+ 00030A.!+!=!#!=~^=  ← YOU ARE HERE  [artifact]
+  00001U~~^!!^;!,=.  (Origin)
+    └─+ 00005A.!+!=#!-,^=  "Identifier module started"
+      └─+ 0000AA.!+!=#!-~~=  "Parser core logic"  [artifact]
+        ├─} 0000FA~!}!^#!=~^=  "Validator branched"  [artifact]
+        └─+ 00015A.!+!=#!=~~=  "Generator added"  [artifact]
+          └─+ 00030A.!+!=#!=~^=  ← YOU ARE HERE  [artifact]
 ```
 
 ---

@@ -344,3 +344,90 @@ class TestArtifacts:
         assert result.exists()
         assert result.name == "00001A-my-code.py"
         assert result.read_text() == "print('hello')"
+
+
+# ============================================================
+# Find By Prefix Tests
+# ============================================================
+
+
+class TestFindByPrefix:
+    """find_blink_by_prefix() tests."""
+
+    def test_find_by_6char_prefix(self, bss_env):
+        """Find a blink by sequence+author prefix."""
+        blink = _make_blink(1, author="A", relational="^")
+        write_blink(blink, bss_env.active_dir)
+        found = bss_env.find_blink_by_prefix("00001A")
+        assert found is not None
+        assert found.name.startswith("00001A")
+
+    def test_find_by_5char_prefix(self, bss_env):
+        """Find a blink by sequence-only prefix."""
+        blink = _make_blink(1, author="B", relational="^")
+        write_blink(blink, bss_env.active_dir)
+        found = bss_env.find_blink_by_prefix("00001")
+        assert found is not None
+        assert found.name.startswith("00001")
+
+    def test_find_in_relay(self, bss_env):
+        blink = _make_blink(1, relational="^")
+        write_blink(blink, bss_env.relay_dir)
+        found = bss_env.find_blink_by_prefix("00001")
+        assert found is not None
+        assert found.parent == bss_env.relay_dir
+
+    def test_find_in_archive_recursive(self, bss_env):
+        """find_blink_by_prefix searches archive subdirectories."""
+        subdir = bss_env.archive_dir / "2026-Q1"
+        subdir.mkdir()
+        blink = _make_blink(1, relational="^")
+        write_blink(blink, subdir)
+        found = bss_env.find_blink_by_prefix("00001")
+        assert found is not None
+        assert "2026-Q1" in str(found)
+
+    def test_prefix_not_found(self, bss_env):
+        found = bss_env.find_blink_by_prefix("ZZZZZ")
+        assert found is None
+
+    def test_search_order_relay_first(self, bss_env):
+        """Relay is searched before active."""
+        blink = _make_blink(1, relational="^")
+        write_blink(blink, bss_env.relay_dir)
+        write_blink(blink, bss_env.active_dir)
+        found = bss_env.find_blink_by_prefix("00001")
+        assert found.parent == bss_env.relay_dir
+
+
+# ============================================================
+# List Artifacts Tests
+# ============================================================
+
+
+class TestListArtifacts:
+    """list_artifacts() tests."""
+
+    def test_empty_artifacts(self, bss_env):
+        assert bss_env.list_artifacts() == []
+
+    def test_lists_artifact_files(self, bss_env):
+        (bss_env.artifacts_dir / "00001A-module.py").write_text("# code")
+        (bss_env.artifacts_dir / "00002B-data.json").write_text("{}")
+        result = bss_env.list_artifacts()
+        assert len(result) == 2
+        assert result[0].name == "00001A-module.py"
+        assert result[1].name == "00002B-data.json"
+
+    def test_excludes_directories(self, bss_env):
+        (bss_env.artifacts_dir / "subdir").mkdir()
+        (bss_env.artifacts_dir / "00001A-module.py").write_text("# code")
+        result = bss_env.list_artifacts()
+        assert len(result) == 1
+
+    def test_sorted_output(self, bss_env):
+        (bss_env.artifacts_dir / "00003C-last.py").write_text("")
+        (bss_env.artifacts_dir / "00001A-first.py").write_text("")
+        result = bss_env.list_artifacts()
+        assert result[0].name == "00001A-first.py"
+        assert result[1].name == "00003C-last.py"
