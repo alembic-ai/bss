@@ -6,8 +6,6 @@ A file-based coordination protocol for stateless AI models. Each "blink" is a Ma
 
 ```bash
 git clone https://github.com/alembic-ai/bss
-cd bss
-pip install .
 ```
 
 Requires Python 3.11+.
