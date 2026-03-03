@@ -5,6 +5,12 @@ A file-based coordination protocol for stateless AI models. Each "blink" is a Ma
 ## Install
 
 ```bash
+pip install git+https://github.com/alembic-ai/bss.git
+```
+
+For development (editable install):
+
+```bash
 pip install -e .
 ```
 
