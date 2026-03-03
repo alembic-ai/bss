@@ -39,7 +39,7 @@ bss/
 └── .gitignore
 ```
 
-0.2 — Write your CLAUDE.md for Claude Code sessions:
+0.2 — Write your CLAUDE.md for the build agent sessions:
 
 ```markdown
 # BSS Reference Implementation
@@ -91,8 +91,8 @@ Born from: Origin
 
 ROSTER
 
-A | Claude-Code | primary | global | Reference implementation build agent. Full autonomy. Writes blinks at session boundaries.
-U | Cam | architect | global | Protocol designer. Reviews, directs, and makes final calls on spec interpretation.
+A | Agent-A | primary | global | Reference implementation build agent. Full autonomy. Writes blinks at session boundaries.
+U | Architect | architect | global | Protocol designer. Reviews, directs, and makes final calls on spec interpretation.
 
 Lineage: 00002S~~^!!^;.!=.
 
@@ -522,7 +522,7 @@ $ bss tree 00030U.!+!=#!=~^=
 
 These rules apply throughout the entire build process:
 
-1. **Claude Code writes blinks.** At the end of every Claude Code session, a handoff blink is written to `/relay/`. At the start of every session, `/relay/` is read first.
+1. **the build agent writes blinks.** At the end of every the build agent session, a handoff blink is written to `/relay/`. At the start of every session, `/relay/` is read first.
 
 2. **You write blinks.** When you make a design decision, complete a level, or hit a wall — write a blink. Your sigil is `U`.
 
@@ -538,9 +538,9 @@ These rules apply throughout the entire build process:
 
 ---
 
-## Recommended Claude Code Session Opener
+## Recommended the build agent Session Opener
 
-Paste this at the start of each Claude Code session:
+Paste this at the start of each the build agent session:
 
 ```
 Read CLAUDE.md, then read /relay/ for handoff blinks from last session.

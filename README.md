@@ -61,7 +61,7 @@ bss artifact 00001
 bss produce mycode.py --blink 00001A~~^!!^;!!=. --slug my-module
 
 # Add a model to the roster
-bss roster-add B Claude-B --role specialist --ceiling regional
+bss roster-add B Model-B --role specialist --ceiling regional
 
 # Update a roster entry
 bss roster-update B --ceiling global
