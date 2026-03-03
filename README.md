@@ -287,8 +287,27 @@ The full BSS specification is in `bss_spec/BSS_SPEC_v1.md`. Key concepts:
 - **7-generation cap** — Threads converge after 7 continuations
 - **Five-phase session lifecycle** — INTAKE, TRIAGE, WORK, OUTPUT, DORMANCY
 - **Triage ordering** — Urgency, then recency, then scope
+- **Artifact system** — Files linked to blinks via the `artifacts/` directory, with slug-based naming and full lineage tracking (see [Artifact Integration Spec](bss_spec/BSS_ARTIFACT_INTEGRATION.md))
 
 ## License
 
 Code: MIT
 Specification: CC BY 4.0
+
+## Community
+
+### Implementations & Tools
+
+| Project | Language | Type | Compliance | Link |
+|---------|----------|------|------------|------|
+| *Your project here* | — | — | — | [Submit yours](CONTRIBUTING.md) |
+
+Built something with BSS? Open an issue or PR to get listed.
+
+### Resources
+
+- [Architecture Overview](docs/ARCHITECTURE.md)
+- [Integration Guide](docs/INTEGRATING.md)
+- [Blink Patterns](docs/PATTERNS.md)
+- [Full Specification](bss_spec/BSS_SPEC_v1.md)
+- [Artifact Integration Spec](bss_spec/BSS_ARTIFACT_INTEGRATION.md)
