@@ -4,11 +4,148 @@ A file-based coordination protocol for stateless AI models. Each "blink" is a Ma
 
 ## Install
 
+Requires **Python 3.11+** and **git**.
+
+<details>
+<summary><strong>Linux (Debian / Ubuntu)</strong></summary>
+
+#### Prerequisites
+
 ```bash
-git clone https://github.com/alembic-ai/bss
+sudo apt update
+sudo apt install python3 python3-venv python3-pip git
 ```
 
-Requires Python 3.11+.
+Check your version:
+
+```bash
+python3 --version  # must be 3.11 or higher
+```
+
+> On older releases (e.g. Ubuntu 22.04) the default Python may be 3.10.
+> Install a newer version via the [deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa):
+> ```bash
+> sudo add-apt-repository ppa:deadsnakes/ppa
+> sudo apt install python3.12 python3.12-venv
+> ```
+> Then substitute `python3.12` for `python3` below.
+
+#### Install
+
+```bash
+git clone https://github.com/alembic-ai/bss
+cd bss
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
+
+#### Verify
+
+```bash
+bss --help
+bss init
+```
+
+#### Troubleshooting
+
+- **`externally-managed-environment` error** — You forgot the venv step. Modern Debian/Ubuntu (PEP 668) blocks system-wide pip installs. Always create and activate a virtual environment first.
+- **`python3-venv` not found** — Run `sudo apt install python3-venv`.
+
+</details>
+
+<details>
+<summary><strong>macOS</strong></summary>
+
+#### Prerequisites
+
+Install Python 3.11+ via [Homebrew](https://brew.sh):
+
+```bash
+brew install python@3.12 git
+```
+
+Or download from [python.org](https://www.python.org/downloads/).
+
+Check your version:
+
+```bash
+python3 --version  # must be 3.11 or higher
+```
+
+> macOS includes Python via Xcode Command Line Tools, but it may be an older version. Use `brew install` to get 3.12+.
+
+#### Install
+
+```bash
+git clone https://github.com/alembic-ai/bss
+cd bss
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
+
+#### Verify
+
+```bash
+bss --help
+bss init
+```
+
+#### Troubleshooting
+
+- **`python3: command not found`** — Install Xcode CLI tools (`xcode-select --install`) or use Homebrew.
+- **Old Python version** — `brew install python@3.12` and use `python3.12` instead of `python3` when creating the venv.
+
+</details>
+
+<details>
+<summary><strong>Windows (PowerShell)</strong></summary>
+
+#### Prerequisites
+
+Install Python 3.11+ and git. Using [winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/):
+
+```powershell
+winget install Python.Python.3.12
+winget install Git.Git
+```
+
+Or download from [python.org](https://www.python.org/downloads/) and [git-scm.com](https://git-scm.com). During Python install, check **"Add python.exe to PATH"**.
+
+Restart your terminal after installing, then check:
+
+```powershell
+python --version  # must be 3.11 or higher
+```
+
+#### Install
+
+```powershell
+git clone https://github.com/alembic-ai/bss
+cd bss
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -e .
+```
+
+#### Verify
+
+```powershell
+bss --help
+bss init
+```
+
+#### Troubleshooting
+
+- **`Activate.ps1 cannot be loaded because running scripts is disabled`** — Run this once as Administrator, then retry:
+  ```powershell
+  Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+  ```
+- **`python` not found** — Ensure you checked "Add python.exe to PATH" during install, or add it manually. Restart your terminal.
+- **`python` opens the Microsoft Store** — Remove the App Execution Alias: Settings > Apps > Advanced app settings > App execution aliases > toggle off "python.exe" and "python3.exe".
+
+</details>
 
 ## Quickstart
 
