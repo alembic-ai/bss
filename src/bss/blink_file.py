@@ -113,6 +113,11 @@ def write(
         )
 
     filepath = directory / f"{blink.blink_id}.md"
+    if filepath.exists():
+        raise FileExistsError(
+            f"Blink '{blink.blink_id}' already exists at {filepath}. "
+            "Blinks are immutable and cannot be overwritten."
+        )
     filepath.write_text(content, encoding="utf-8")
     return filepath
 

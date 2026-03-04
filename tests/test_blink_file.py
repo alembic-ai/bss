@@ -364,6 +364,13 @@ class TestValidation:
         assert not valid
         assert any("circular" in v.lower() or "duplicate" in v.lower() for v in violations)
 
+    def test_write_immutability_rejects_overwrite(self, tmp_dir):
+        """Writing a blink that already exists raises FileExistsError."""
+        blink = _make_origin_blink()
+        write(blink, tmp_dir)
+        with pytest.raises(FileExistsError, match="immutable"):
+            write(blink, tmp_dir)
+
     def test_origin_with_parent_rejected(self):
         """Origin blink with a parent in Born from is rejected."""
         origin_id = generate(
