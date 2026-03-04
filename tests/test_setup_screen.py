@@ -9,10 +9,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 import yaml
 
-from textual.app import App, ComposeResult
-from textual.widgets import Button, Input, Static
+textual = pytest.importorskip("textual", reason="textual not installed")
+from textual.app import App, ComposeResult  # noqa: E402
+from textual.widgets import Button, Input, Static  # noqa: E402
 
-from terminal.setup_screen import SetupScreen, STEPS, BACKENDS
+terminal_mod = pytest.importorskip("terminal", reason="terminal package not installed")
+from terminal.setup_screen import SetupScreen, STEPS, BACKENDS  # noqa: E402
 
 
 # ── Test harness ────────────────────────────────────────────
