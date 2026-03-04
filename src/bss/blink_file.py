@@ -80,12 +80,18 @@ def _contains_blink_id(text: str) -> bool:
     return bool(pattern.search(text))
 
 
-def write(blink: BlinkFile, directory: Path) -> Path:
+def write(
+    blink: BlinkFile,
+    directory: Path,
+    min_sentences: int = MIN_SUMMARY_SENTENCES,
+) -> Path:
     """Write a conformant blink .md file to the specified directory.
 
     Args:
         blink: The BlinkFile to write.
         directory: The directory to write to.
+        min_sentences: Minimum sentence count for validation. Defaults to 2
+            per spec. Relay mode may pass 1.
 
     Returns:
         The path to the written file.
@@ -93,7 +99,7 @@ def write(blink: BlinkFile, directory: Path) -> Path:
     Raises:
         ValueError: If the blink fails validation.
     """
-    valid, violations = validate_file(blink)
+    valid, violations = validate_file(blink, min_sentences=min_sentences)
     if not valid:
         raise ValueError(f"Invalid blink file: {'; '.join(violations)}")
 
@@ -233,8 +239,17 @@ def parse_content(blink_id: str, content: str) -> BlinkFile:
     )
 
 
-def validate_file(blink: BlinkFile) -> tuple[bool, list[str]]:
+def validate_file(
+    blink: BlinkFile,
+    min_sentences: int = MIN_SUMMARY_SENTENCES,
+) -> tuple[bool, list[str]]:
     """Validate a BlinkFile against the BSS file format specification.
+
+    Args:
+        blink: The BlinkFile to validate.
+        min_sentences: Minimum sentence count for summaries. Defaults to
+            MIN_SUMMARY_SENTENCES (2) per spec Module 4. Relay mode may
+            pass 1 to accommodate terse model outputs.
 
     Returns (is_valid, list_of_violations).
     """
@@ -255,6 +270,13 @@ def validate_file(blink: BlinkFile) -> tuple[bool, list[str]]:
                     f"Born from contains invalid blink ID '{parent}' "
                     f"(length {len(parent)}, expected {BLINK_ID_LENGTH})"
                 )
+            else:
+                parent_valid, parent_violations = validate_id(parent)
+                if not parent_valid:
+                    violations.append(
+                        f"Born from contains malformed blink ID '{parent}': "
+                        f"{'; '.join(parent_violations)}"
+                    )
 
     # Check relational / born_from consistency
     is_roster = False
@@ -279,10 +301,10 @@ def validate_file(blink: BlinkFile) -> tuple[bool, list[str]]:
         violations.append("Summary is required")
     elif not is_roster:
         sentence_count = _count_sentences(blink.summary)
-        if sentence_count < MIN_SUMMARY_SENTENCES:
+        if sentence_count < min_sentences:
             violations.append(
                 f"Summary has {sentence_count} sentence(s), "
-                f"minimum is {MIN_SUMMARY_SENTENCES}"
+                f"minimum is {min_sentences}"
             )
         if sentence_count > MAX_SUMMARY_SENTENCES:
             violations.append(
@@ -313,6 +335,11 @@ def validate_file(blink: BlinkFile) -> tuple[bool, list[str]]:
         if blink.is_origin and blink.lineage != [blink.blink_id]:
             violations.append(
                 "Origin blink lineage must be self-reference only"
+            )
+        # Check for duplicate entries (circular lineage)
+        if len(blink.lineage) != len(set(blink.lineage)):
+            violations.append(
+                "Lineage contains duplicate entries (circular reference)"
             )
 
     # Check file size

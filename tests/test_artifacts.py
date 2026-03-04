@@ -186,3 +186,57 @@ class TestArtifactDetail:
         artifacts = env.list_artifacts()
         matches = [a for a in artifacts if a.name[:5] == "ZZZZZ"]
         assert len(matches) == 0
+
+
+# ============================================================
+# Artifact slug sanitization (security)
+# ============================================================
+
+
+class TestArtifactSlugSanitization:
+    """Verify that malicious slugs are rejected."""
+
+    def test_path_traversal_rejected(self, env, tmp_path):
+        blink = _make_blink(1)
+        write_blink(blink, env.active_dir)
+        source = tmp_path / "evil.py"
+        source.write_text("# evil")
+
+        with pytest.raises(ValueError, match="Invalid artifact slug"):
+            env.register_artifact(blink.blink_id, source, "../../../etc/passwd")
+
+    def test_slash_in_slug_rejected(self, env, tmp_path):
+        blink = _make_blink(1)
+        write_blink(blink, env.active_dir)
+        source = tmp_path / "evil.py"
+        source.write_text("# evil")
+
+        with pytest.raises(ValueError, match="Invalid artifact slug"):
+            env.register_artifact(blink.blink_id, source, "foo/bar")
+
+    def test_dot_dot_rejected(self, env, tmp_path):
+        blink = _make_blink(1)
+        write_blink(blink, env.active_dir)
+        source = tmp_path / "evil.py"
+        source.write_text("# evil")
+
+        with pytest.raises(ValueError, match="Invalid artifact slug"):
+            env.register_artifact(blink.blink_id, source, "..")
+
+    def test_empty_slug_rejected(self, env, tmp_path):
+        blink = _make_blink(1)
+        write_blink(blink, env.active_dir)
+        source = tmp_path / "evil.py"
+        source.write_text("# evil")
+
+        with pytest.raises(ValueError, match="Invalid artifact slug"):
+            env.register_artifact(blink.blink_id, source, "")
+
+    def test_valid_slug_accepted(self, env, tmp_path):
+        blink = _make_blink(1)
+        write_blink(blink, env.active_dir)
+        source = tmp_path / "good.py"
+        source.write_text("# good")
+
+        result = env.register_artifact(blink.blink_id, source, "my-valid-slug_v2")
+        assert result.exists()

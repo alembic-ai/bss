@@ -431,3 +431,46 @@ class TestListArtifacts:
         result = bss_env.list_artifacts()
         assert result[0].name == "00001A-first.py"
         assert result[1].name == "00003C-last.py"
+
+
+# ============================================================
+# Symlink rejection tests
+# ============================================================
+
+
+class TestSymlinkRejection:
+    """Verify that symlinks are rejected in blink file listing."""
+
+    def test_symlink_in_relay_ignored(self, bss_env, tmp_path):
+        """Symlinks in /relay/ are not returned by scan."""
+        # Write a real blink
+        blink = _make_blink(1, relational="^")
+        write_blink(blink, bss_env.relay_dir)
+
+        # Create a symlink to a file outside BSS root
+        external = tmp_path / "external_dir" / "fake.md"
+        external.parent.mkdir()
+        external.write_text("Born from: Origin\n\nFake blink.\n\nLineage: FAKE\n")
+        symlink = bss_env.relay_dir / "SYMLINKED_FAKE__.md"
+        try:
+            symlink.symlink_to(external)
+        except OSError:
+            pytest.skip("Cannot create symlinks on this platform")
+
+        files = bss_env._list_blink_files(bss_env.relay_dir)
+        # Only the real blink should be returned
+        assert len(files) == 1
+        assert files[0].name == f"{blink.blink_id}.md"
+
+    def test_symlink_in_archive_ignored(self, bss_env, tmp_path):
+        """Symlinks in /archive/ are not returned by recursive listing."""
+        external = tmp_path / "outside.md"
+        external.write_text("dangerous")
+        symlink = bss_env.archive_dir / "evil.md"
+        try:
+            symlink.symlink_to(external)
+        except OSError:
+            pytest.skip("Cannot create symlinks on this platform")
+
+        files = bss_env._list_blink_files_recursive(bss_env.archive_dir)
+        assert len(files) == 0

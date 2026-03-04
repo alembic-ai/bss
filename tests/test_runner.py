@@ -229,9 +229,11 @@ class TestRelayRunner:
 
         runner = RelayRunner(env, mock_model_manager)
 
-        # Very short response gets padded
+        # Short response (under 6 chars) hits fallback; longer ones are kept
         summary = runner._extract_summary("Done.")
-        assert "completed" in summary.lower() or "session" in summary.lower() or "done" in summary.lower()
+        assert len(summary) > 5  # Fallback produces a valid summary
+        summary2 = runner._extract_summary("Task is complete.")
+        assert "complete" in summary2.lower()
 
     def test_extract_summary_empty(self, env, mock_model_manager):
         from integrations.runner import RelayRunner

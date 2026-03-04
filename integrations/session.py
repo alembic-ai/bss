@@ -101,11 +101,13 @@ class BSSSession:
 
         return response, tokens, elapsed
 
-    def handoff(self, summary: str) -> BlinkFile:
+    def handoff(self, summary: str, min_sentences: int = 2) -> BlinkFile:
         """Write a handoff blink to /relay/ capturing what happened.
 
         Args:
-            summary: 2-5 sentence summary of the session.
+            summary: Summary of the session.
+            min_sentences: Minimum sentence count for validation. Relay mode
+                with small models may pass 1.
 
         Returns:
             The written BlinkFile.
@@ -117,6 +119,7 @@ class BSSSession:
             summary=summary,
             author=self.sigil,
             parent=self._last_blink_id,
+            min_sentences=min_sentences,
         )
         self._last_blink_id = blink.blink_id
 
@@ -129,14 +132,16 @@ class BSSSession:
         action: str = "~.",
         scope: str = "-",
         parent: str | None = None,
+        min_sentences: int = 2,
     ) -> BlinkFile:
         """Write a blink to /active/ for work output.
 
         Args:
-            summary: 2-5 sentence summary.
+            summary: Summary of work output.
             action: 2-char action state (default ~. = completed).
             scope: Scope sigil.
             parent: Parent blink ID, or uses last blink from this session.
+            min_sentences: Minimum sentence count for validation.
 
         Returns:
             The written BlinkFile.
@@ -184,6 +189,6 @@ class BSSSession:
             links=[],
         )
 
-        write_blink(blink, self.env.active_dir)
+        write_blink(blink, self.env.active_dir, min_sentences=min_sentences)
         self._last_blink_id = blink.blink_id
         return blink

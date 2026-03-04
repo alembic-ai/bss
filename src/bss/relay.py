@@ -110,6 +110,7 @@ def handoff(
     maturity: str = "~",
     priority: str = "=",
     sensitivity: str = "=",
+    min_sentences: int = 2,
 ) -> BlinkFile:
     """Write a handoff blink to /relay/ with action state ~!.
 
@@ -119,6 +120,7 @@ def handoff(
         author: Author sigil.
         parent: Parent blink ID (for Born from). None creates an origin.
         relational: Relational sigil (default: continuation).
+        min_sentences: Minimum sentence count for summary validation.
         All other kwargs: sigil values with sensible defaults.
 
     Returns:
@@ -163,7 +165,7 @@ def handoff(
         links=[],
     )
 
-    write_blink(blink, env.relay_dir)
+    write_blink(blink, env.relay_dir, min_sentences=min_sentences)
     return blink
 
 
@@ -176,6 +178,7 @@ def error_blink(
     domain: str = "#",
     subdomain: str = "-",
     scope: str = "-",
+    min_sentences: int = 2,
 ) -> BlinkFile:
     """Write an error blink to /relay/ with action state !!.
 
@@ -185,6 +188,7 @@ def error_blink(
         author: Author sigil.
         parent: Parent error blink ID for chained escalation.
         confidence: Diagnostic certainty (! clear, ~ uncertain).
+        min_sentences: Minimum sentence count for summary validation.
 
     Returns:
         The written BlinkFile.
@@ -227,7 +231,7 @@ def error_blink(
         links=[],
     )
 
-    write_blink(blink, env.relay_dir)
+    write_blink(blink, env.relay_dir, min_sentences=min_sentences)
     return blink
 
 

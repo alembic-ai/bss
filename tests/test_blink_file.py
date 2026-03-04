@@ -243,6 +243,65 @@ class TestValidation:
         assert not valid
         assert any("sentence" in v.lower() for v in violations)
 
+    def test_summary_one_sentence_accepted_with_min_1(self):
+        """Single-sentence summary passes when min_sentences=1 (relay mode)."""
+        origin_id = generate(
+            sequence=1, author="A", relational="^",
+            action_energy="~", action_valence="~",
+            confidence="!", cognitive="!",
+            domain="^", subdomain=";", scope="!",
+            maturity=",", priority="=", sensitivity=".",
+        )
+        blink = BlinkFile(
+            blink_id=origin_id,
+            born_from=["Origin"],
+            summary="Just one sentence.",
+            lineage=[origin_id],
+            links=[],
+        )
+        valid, violations = validate_file(blink, min_sentences=1)
+        assert valid, f"Should be valid with min_sentences=1: {violations}"
+
+    def test_summary_one_sentence_rejected_with_default(self):
+        """Single-sentence summary still rejected with default min_sentences."""
+        origin_id = generate(
+            sequence=1, author="A", relational="^",
+            action_energy="~", action_valence="~",
+            confidence="!", cognitive="!",
+            domain="^", subdomain=";", scope="!",
+            maturity=",", priority="=", sensitivity=".",
+        )
+        blink = BlinkFile(
+            blink_id=origin_id,
+            born_from=["Origin"],
+            summary="Just one sentence.",
+            lineage=[origin_id],
+            links=[],
+        )
+        valid, violations = validate_file(blink)
+        assert not valid
+        assert any("sentence" in v.lower() for v in violations)
+
+    def test_empty_summary_rejected_even_with_min_1(self):
+        """Empty summary is always rejected regardless of min_sentences."""
+        origin_id = generate(
+            sequence=1, author="A", relational="^",
+            action_energy="~", action_valence="~",
+            confidence="!", cognitive="!",
+            domain="^", subdomain=";", scope="!",
+            maturity=",", priority="=", sensitivity=".",
+        )
+        blink = BlinkFile(
+            blink_id=origin_id,
+            born_from=["Origin"],
+            summary="",
+            lineage=[origin_id],
+            links=[],
+        )
+        valid, violations = validate_file(blink, min_sentences=1)
+        assert not valid
+        assert any("required" in v.lower() for v in violations)
+
     def test_lineage_depth_over_7_rejected(self):
         """Lineage exceeding maximum depth of 7 is rejected."""
         ids = [generate(sequence=i, author="A", relational="+",
@@ -281,6 +340,29 @@ class TestValidation:
         )
         valid, violations = validate_file(blink)
         assert valid, f"Lineage of 7 should be valid: {violations}"
+
+    def test_circular_lineage_rejected(self):
+        """Lineage with duplicate entries (circular reference) is rejected."""
+        id_a = generate(sequence=1, author="A", relational="^",
+                        action_energy="~", action_valence="~",
+                        confidence="!", cognitive="!",
+                        domain="^", subdomain=";", scope="!",
+                        maturity=",", priority="=", sensitivity=".")
+        id_b = generate(sequence=2, author="A", relational="+",
+                        action_energy=".", action_valence="!",
+                        confidence=".", cognitive="=",
+                        domain="#", subdomain="!", scope="-",
+                        maturity="~", priority="=", sensitivity="=")
+        blink = BlinkFile(
+            blink_id=id_b,
+            born_from=[id_a],
+            summary="This has a circular lineage. It should be rejected.",
+            lineage=[id_a, id_b, id_a, id_b],  # Circular!
+            links=[],
+        )
+        valid, violations = validate_file(blink)
+        assert not valid
+        assert any("circular" in v.lower() or "duplicate" in v.lower() for v in violations)
 
     def test_origin_with_parent_rejected(self):
         """Origin blink with a parent in Born from is rejected."""

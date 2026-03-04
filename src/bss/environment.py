@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 import warnings
 from pathlib import Path
 
@@ -67,17 +68,36 @@ class BSSEnvironment:
         """Check if this root contains all required BSS directories."""
         return all((self.root / d).is_dir() for d in REQUIRED_DIRS)
 
+    def _is_within_root(self, path: Path) -> bool:
+        """Check that a resolved path stays within the BSS root."""
+        try:
+            return path.resolve().is_relative_to(self.root.resolve())
+        except (OSError, ValueError):
+            return False
+
     def _list_blink_files(self, directory: Path) -> list[Path]:
-        """List all .md blink files in a directory."""
+        """List all .md blink files in a directory.
+
+        Rejects symlinks and paths that resolve outside the BSS root.
+        """
         if not directory.exists():
             return []
-        return sorted(directory.glob("*.md"))
+        return sorted(
+            f for f in directory.glob("*.md")
+            if not f.is_symlink() and self._is_within_root(f)
+        )
 
     def _list_blink_files_recursive(self, directory: Path) -> list[Path]:
-        """List all .md blink files in a directory and subdirectories."""
+        """List all .md blink files in a directory and subdirectories.
+
+        Rejects symlinks and paths that resolve outside the BSS root.
+        """
         if not directory.exists():
             return []
-        return sorted(directory.rglob("*.md"))
+        return sorted(
+            f for f in directory.rglob("*.md")
+            if not f.is_symlink() and self._is_within_root(f)
+        )
 
     def scan(self, directory: str) -> list[BlinkFile]:
         """List and parse all blinks in a directory.
@@ -172,13 +192,16 @@ class BSSEnvironment:
         # Search in order: relay, active, profile
         for dirname in ["relay", "active", "profile"]:
             path = self.root / dirname / filename
-            if path.exists():
+            if path.exists() and not path.is_symlink() and self._is_within_root(path):
                 return path
 
         # Search archive recursively (including subdirectories)
         archive_path = self.archive_dir
         if archive_path.exists():
-            matches = list(archive_path.rglob(filename))
+            matches = [
+                m for m in archive_path.rglob(filename)
+                if not m.is_symlink() and self._is_within_root(m)
+            ]
             if matches:
                 return matches[0]
 
@@ -201,13 +224,19 @@ class BSSEnvironment:
         for dirname in ["relay", "active", "profile"]:
             dir_path = self.root / dirname
             if dir_path.exists():
-                matches = sorted(dir_path.glob(pattern))
+                matches = sorted(
+                    f for f in dir_path.glob(pattern)
+                    if not f.is_symlink() and self._is_within_root(f)
+                )
                 if matches:
                     return matches[0]
 
         # Search archive recursively
         if self.archive_dir.exists():
-            matches = sorted(self.archive_dir.rglob(pattern))
+            matches = sorted(
+                f for f in self.archive_dir.rglob(pattern)
+                if not f.is_symlink() and self._is_within_root(f)
+            )
             if matches:
                 return matches[0]
 
@@ -334,7 +363,17 @@ class BSSEnvironment:
 
         Returns:
             Path to the stored artifact.
+
+        Raises:
+            ValueError: If the slug contains unsafe characters.
         """
+        # Sanitize slug to prevent path traversal
+        if not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9_-]*$', slug):
+            raise ValueError(
+                f"Invalid artifact slug '{slug}'. "
+                "Use only letters, digits, hyphens, and underscores."
+            )
+
         sequence = blink_id[:5]
         author = blink_id[5]
         ext = filepath.suffix
@@ -342,6 +381,10 @@ class BSSEnvironment:
 
         self.artifacts_dir.mkdir(exist_ok=True)
         dest = self.artifacts_dir / artifact_name
+
+        # Verify destination stays within artifacts directory
+        if not dest.resolve().is_relative_to(self.artifacts_dir.resolve()):
+            raise ValueError("Artifact path escapes artifacts directory")
 
         import shutil
         shutil.copy2(filepath, dest)

@@ -60,8 +60,8 @@ class RelayRunner:
         # Generate a summary from the response (first 2-3 sentences)
         summary = self._extract_summary(response)
 
-        # Write handoff blink
-        blink = session.handoff(summary)
+        # Write handoff blink (relay mode: accept 1-sentence summaries)
+        blink = session.handoff(summary, min_sentences=1)
 
         # Reset session for next invocation
         self._sessions.pop(sigil, None)
@@ -154,9 +154,10 @@ class RelayRunner:
 
     @staticmethod
     def _extract_summary(response: str) -> str:
-        """Extract a 2-5 sentence summary from a model response.
+        """Extract a summary from a model response for relay handoff.
 
-        Takes the first few sentences, ensuring it meets BSS summary requirements.
+        Takes the first few sentences. Single-sentence summaries are valid
+        in relay mode (min_sentences=1 is passed to handoff).
         """
         # Split into sentences
         sentences = []
@@ -170,18 +171,14 @@ class RelayRunner:
             sentences.append(current.strip())
 
         if not sentences:
-            return "Model completed inference cycle. No substantive output was produced."
+            return "Model completed inference cycle."
 
-        # Take 2-3 sentences for summary
+        # Take up to 3 sentences for summary
         summary_sentences = sentences[:3]
         summary = " ".join(summary_sentences)
 
         # Truncate if too long for blink file (keep under ~400 chars)
         if len(summary) > 400:
             summary = summary[:397] + "..."
-
-        # Ensure at least 2 sentences
-        if len(summary_sentences) < 2:
-            summary += " Session cycle completed normally."
 
         return summary

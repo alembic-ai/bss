@@ -7,11 +7,14 @@ Any endpoint that serves /v1/chat/completions works.
 from __future__ import annotations
 
 import json
+import logging
 import time
 import urllib.request
 import urllib.error
 
 from integrations.providers import Provider
+
+logger = logging.getLogger(__name__)
 
 
 class OpenAIProvider(Provider):
@@ -29,6 +32,13 @@ class OpenAIProvider(Provider):
 
         if not self._base_url or not self._model:
             return False
+
+        if self._api_key and self._base_url.startswith("http://"):
+            logger.warning(
+                "API key will be transmitted over unencrypted HTTP to %s. "
+                "Use HTTPS to protect credentials.",
+                self._base_url,
+            )
 
         # Verify the endpoint is reachable with a lightweight models list
         try:

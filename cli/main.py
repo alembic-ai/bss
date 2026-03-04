@@ -537,6 +537,14 @@ def write_cmd(
     parent = None
     if relational != "^":
         parent = typer.prompt("  Parent blink ID")
+        # Validate parent ID format
+        parent_valid, parent_violations = validate_id(parent)
+        if not parent_valid:
+            console.print(f"\n  [red]Invalid parent blink ID:[/red] {'; '.join(parent_violations)}")
+            raise typer.Exit(code=1)
+        # Warn if parent not found (may be in an external environment)
+        if not env.find_blink(parent):
+            console.print(f"\n  [yellow]Warning:[/yellow] Parent blink '{parent}' not found in this environment.")
 
     # Confidence
     conf_choices = [("!", "High"), (".", "Moderate"), ("~", "Low"), (",", "Speculative")]

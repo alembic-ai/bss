@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.0.1 — Security Hardening & Relay Fix
+
+### Fixes
+- Configurable summary sentence minimum for relay mode (fixes #1)
+- Artifact slug sanitization prevents path traversal attacks
+- Symlink rejection in all filesystem scan and lookup operations
+- Born-from parent IDs validated with full grammar check, not just length
+- Circular lineage detection in blink validation
+- CLI `bss write` validates parent blink ID format before writing
+- HTTP credential transmission warning for OpenAI-compatible providers
+
+### Infrastructure
+- CI workflow fix: integration tests now run correctly
+- Added CODE_OF_CONDUCT.md (Contributor Covenant v2.1)
+- Added SECURITY.md (vulnerability disclosure process)
+- Test count: 487 → 498
+
 ## v1.0.0 — Initial Release
 
 ### Protocol
