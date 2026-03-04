@@ -240,7 +240,8 @@ def read_cmd(
     console.print()
     console.print(f"  {blink.summary}")
     console.print()
-    console.print(f"  Lineage: {' \u2192 '.join(blink.lineage)}")
+    lineage_str = " \u2192 ".join(blink.lineage)
+    console.print(f"  Lineage: {lineage_str}")
     if blink.links:
         console.print(f"  Links: {' | '.join(blink.links)}")
     console.print()
