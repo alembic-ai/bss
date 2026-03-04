@@ -338,4 +338,4 @@ class TestRosterConfig:
 
         out = tmp_path / "CLAUDE.md"
         out.write_text(config, encoding="utf-8")
-        assert out.read_text() == config
+        assert out.read_text(encoding="utf-8") == config
