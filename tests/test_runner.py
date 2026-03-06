@@ -261,3 +261,41 @@ class TestRelayRunner:
 
         runner = RelayRunner(env, mock_model_manager)
         assert not runner.is_running
+
+    def test_stop_joins_thread(self, env, mock_model_manager):
+        """stop() joins the auto thread and clears it."""
+        from integrations.runner import RelayRunner
+
+        def slow_infer(*args, **kwargs):
+            time.sleep(0.3)
+            return ("Working on analysis. Making progress.", 15, 0.3)
+
+        mock_model_manager.infer.side_effect = slow_infer
+
+        runner = RelayRunner(env, mock_model_manager)
+        runner.auto_run(["A", "B"], max_rounds=20)
+        time.sleep(0.5)
+
+        runner.stop()
+        assert runner._auto_thread is None
+        assert not runner.is_running
+
+    def test_auto_run_exception_handled(self, env, mock_model_manager):
+        """Exceptions in auto_run thread are caught and reported via callback."""
+        from integrations.runner import RelayRunner
+
+        mock_model_manager.infer.side_effect = RuntimeError("Model crashed")
+
+        runner = RelayRunner(env, mock_model_manager)
+        events = []
+
+        runner.auto_run(["A"], max_rounds=5, callback=lambda e: events.append(e))
+
+        timeout = 10
+        start = time.time()
+        while runner.is_running and time.time() - start < timeout:
+            time.sleep(0.2)
+
+        error_events = [e for e in events if e["type"] == "error"]
+        assert len(error_events) >= 1
+        assert "Model crashed" in error_events[0]["error"]

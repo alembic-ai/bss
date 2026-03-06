@@ -27,7 +27,7 @@ def get_generation(env: BSSEnvironment, blink_id: str) -> int:
 
     visited: set[str] = set()
 
-    while True:
+    for _ in range(50):
         if current_id in visited:
             break
         visited.add(current_id)

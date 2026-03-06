@@ -11,6 +11,7 @@ import logging
 import time
 import urllib.request
 import urllib.error
+from urllib.parse import urlparse
 
 from integrations.providers import Provider
 
@@ -34,11 +35,12 @@ class OpenAIProvider(Provider):
             return False
 
         if self._api_key and self._base_url.startswith("http://"):
-            logger.warning(
-                "API key will be transmitted over unencrypted HTTP to %s. "
-                "Use HTTPS to protect credentials.",
-                self._base_url,
-            )
+            hostname = urlparse(self._base_url).hostname or ""
+            if hostname not in ("localhost", "127.0.0.1", "::1"):
+                raise ValueError(
+                    f"Refusing to send API key over unencrypted HTTP to "
+                    f"remote host '{hostname}'. Use HTTPS or remove the API key."
+                )
 
         # Verify the endpoint is reachable with a lightweight models list
         try:

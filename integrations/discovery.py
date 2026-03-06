@@ -25,6 +25,13 @@ class DiscoveryResult:
     details: dict = field(default_factory=dict)
 
 
+def _mask_key(key: str) -> str:
+    """Mask an API key for display, showing only last 4 chars."""
+    if len(key) > 4:
+        return "****" + key[-4:]
+    return "****"
+
+
 @dataclass
 class DiscoveryReport:
     """Aggregated discovery results."""
@@ -169,7 +176,7 @@ def discover_anthropic() -> list[DiscoveryResult]:
     """Check for Anthropic API key in environment."""
     key = os.environ.get("ANTHROPIC_API_KEY")
     if key:
-        masked = key[:7] + "..." + key[-4:] if len(key) > 11 else "***"
+        masked = _mask_key(key)
         return [DiscoveryResult(
             backend="anthropic",
             source="env_var",
@@ -185,7 +192,7 @@ def discover_gemini() -> list[DiscoveryResult]:
     key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
     env_var = "GOOGLE_API_KEY" if os.environ.get("GOOGLE_API_KEY") else "GEMINI_API_KEY"
     if key:
-        masked = key[:4] + "..." + key[-4:] if len(key) > 8 else "***"
+        masked = _mask_key(key)
         return [DiscoveryResult(
             backend="gemini",
             source="env_var",
@@ -201,7 +208,7 @@ def discover_huggingface() -> list[DiscoveryResult]:
     key = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
     env_var = "HF_TOKEN" if os.environ.get("HF_TOKEN") else "HUGGING_FACE_HUB_TOKEN"
     if key:
-        masked = key[:5] + "..." + key[-4:] if len(key) > 9 else "***"
+        masked = _mask_key(key)
         return [DiscoveryResult(
             backend="huggingface",
             source="env_var",

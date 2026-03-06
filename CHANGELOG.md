@@ -1,5 +1,31 @@
 # Changelog
 
+## v1.2.0 — Security Hardening
+
+### Security
+- File size guard on blink reads (rejects files > 10 MB)
+- File-based sequence locking (`fcntl.flock` / `msvcrt.locking`) prevents race conditions
+- HTTP + API key to remote hosts blocked (`ValueError` raised; localhost exempted)
+- Atomic artifact registration with `O_CREAT | O_EXCL` prevents TOCTOU races
+- Recursive directory listing depth-limited to 3 levels (DoS prevention)
+- Blink files written with `0o644` permissions on Unix
+- Config files written with `0o600` permissions on Unix
+- Persistent integrity manifest (`.bss_manifest.json`) for cross-session tampering detection
+- Lineage validation guards in relay handoff, error blink, and session write
+- Generation walk loop bounded to 50 iterations (prevents infinite loops)
+- Standardized API key masking via `_mask_key()` helper
+- Thread-safe `ModelManager.reload()` (deadlock fix)
+- Thread-safe `RelayRunner.auto_run()` with locked results and exception handling
+- `RelayRunner.stop()` joins thread and clears reference
+
+### Documentation
+- Added `SECURITY_GAPS.md` documenting all mitigations and known remaining gaps
+- Scalability gaps documented (score: 45/100) with mitigation paths
+- Observability gaps documented (score: 20/100) with mitigation paths
+
+### Infrastructure
+- Test count: 499 → 513
+
 ## v1.1.0 — Immutability Enforcement & Cross-Platform Fixes
 
 ### Features

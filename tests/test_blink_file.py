@@ -371,6 +371,32 @@ class TestValidation:
         with pytest.raises(FileExistsError, match="immutable"):
             write(blink, tmp_dir)
 
+    def test_oversized_file_rejected_on_read(self, tmp_dir):
+        """A file larger than MAX_FILE_SIZE is rejected by read()."""
+        oversized = tmp_dir / "OVERSIZED_FAKE__.md"
+        oversized.write_text("x" * (MAX_FILE_SIZE + 100), encoding="utf-8")
+        with pytest.raises(ValueError, match="exceeds maximum size"):
+            read(oversized)
+
+    def test_normal_file_reads_successfully(self, tmp_dir):
+        """A file within size limits reads normally."""
+        blink = _make_origin_blink()
+        filepath = write(blink, tmp_dir)
+        result = read(filepath)
+        assert result.blink_id == blink.blink_id
+
+    @pytest.mark.skipif(
+        __import__("sys").platform == "win32",
+        reason="Permission model differs on Windows",
+    )
+    def test_written_file_has_644_permissions(self, tmp_dir):
+        """write() sets 0o644 permissions on Unix."""
+        import stat
+        blink = _make_origin_blink()
+        filepath = write(blink, tmp_dir)
+        mode = filepath.stat().st_mode & 0o777
+        assert mode == 0o644
+
     def test_origin_with_parent_rejected(self):
         """Origin blink with a parent in Born from is rejected."""
         origin_id = generate(

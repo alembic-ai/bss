@@ -218,7 +218,13 @@ def setup_models(config_path: str | None = None) -> str:
 
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     with open(out_path, "w") as f:
+        f.write("# WARNING: This file may contain API keys. Keep it private.\n")
         yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+
+    # Restrict config file permissions (owner read/write only)
+    import sys
+    if sys.platform != "win32":
+        os.chmod(out_path, 0o600)
 
     console.print(f"\n  [green]Config written to {out_path}[/green]")
     console.print(f"  {len(models)} model(s) configured.\n")

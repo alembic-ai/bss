@@ -98,55 +98,64 @@ class RelayRunner:
         """
         self._running = True
         self._stop_event.clear()
-        results = []
+        results: list[dict] = []
+        results_lock = threading.Lock()
 
         def _run():
             round_num = 0
-            while round_num < max_rounds and not self._stop_event.is_set():
-                sigil = sigils[round_num % len(sigils)]
-                round_num += 1
+            try:
+                while round_num < max_rounds and not self._stop_event.is_set():
+                    sigil = sigils[round_num % len(sigils)]
+                    round_num += 1
 
-                if callback:
-                    callback({
-                        "type": "round_start",
-                        "round": round_num,
-                        "sigil": sigil,
-                        "max_rounds": max_rounds,
-                    })
-
-                result = self.invoke(sigil)
-                results.append(result)
-
-                if callback:
-                    callback({
-                        "type": "round_end",
-                        "round": round_num,
-                        **result,
-                    })
-
-                # Check for idle signal
-                response_lower = result["response"].lower()
-                if "~~" in response_lower or "[idle]" in response_lower:
                     if callback:
-                        callback({"type": "idle", "sigil": sigil, "round": round_num})
-                    break
+                        callback({
+                            "type": "round_start",
+                            "round": round_num,
+                            "sigil": sigil,
+                            "max_rounds": max_rounds,
+                        })
 
-                # Brief pause between models
-                if not self._stop_event.is_set():
-                    self._stop_event.wait(timeout=0.5)
+                    result = self.invoke(sigil)
+                    with results_lock:
+                        results.append(result)
 
-            self._running = False
-            if callback:
-                callback({"type": "complete", "rounds": round_num, "total_results": len(results)})
+                    if callback:
+                        callback({
+                            "type": "round_end",
+                            "round": round_num,
+                            **result,
+                        })
+
+                    # Check for idle signal
+                    response_lower = result["response"].lower()
+                    if "~~" in response_lower or "[idle]" in response_lower:
+                        if callback:
+                            callback({"type": "idle", "sigil": sigil, "round": round_num})
+                        break
+
+                    # Brief pause between models
+                    if not self._stop_event.is_set():
+                        self._stop_event.wait(timeout=0.5)
+            except Exception as e:
+                if callback:
+                    callback({"type": "error", "error": str(e), "round": round_num})
+            finally:
+                self._running = False
+                if callback:
+                    callback({"type": "complete", "rounds": round_num, "total_results": len(results)})
 
         self._auto_thread = threading.Thread(target=_run, daemon=True)
         self._auto_thread.start()
         return results
 
     def stop(self) -> None:
-        """Interrupt auto mode."""
+        """Interrupt auto mode and wait for thread to finish."""
         self._stop_event.set()
         self._running = False
+        if self._auto_thread is not None:
+            self._auto_thread.join(timeout=10)
+            self._auto_thread = None
 
     @property
     def is_running(self) -> bool:

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import os
 import re
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -119,6 +121,12 @@ def write(
             "Blinks are immutable and cannot be overwritten."
         )
     filepath.write_text(content, encoding="utf-8")
+
+    # Set restrictive permissions (owner rw, group/others read-only)
+    # Skip on Windows where os.chmod only controls read-only flag
+    if sys.platform != "win32":
+        os.chmod(filepath, 0o644)
+
     return filepath
 
 
@@ -173,6 +181,17 @@ def read(filepath: Path) -> BlinkFile:
         blink_id = name[:-3]
     else:
         blink_id = name
+    # Guard against oversized files (DoS prevention)
+    try:
+        file_size = filepath.stat().st_size
+    except OSError as e:
+        raise ValueError(f"Cannot stat blink file {filepath}: {e}")
+    if file_size > MAX_FILE_SIZE:
+        raise ValueError(
+            f"Blink file {filepath.name} exceeds maximum size "
+            f"({file_size} > {MAX_FILE_SIZE} bytes)"
+        )
+
     content = filepath.read_text(encoding="utf-8")
 
     return parse_content(blink_id, content)

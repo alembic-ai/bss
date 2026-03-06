@@ -133,8 +133,12 @@ class ModelManager:
 
     def reload(self, config_path: str | None = None) -> None:
         """Unload current model and re-read config from disk."""
-        self.unload()
-        self._config = _load_config(config_path)
+        with self._lock:
+            if self._provider is not None:
+                self._provider.unload()
+                self._provider = None
+                self._model_sigil = None
+            self._config = _load_config(config_path)
 
     def status(self) -> dict:
         return {

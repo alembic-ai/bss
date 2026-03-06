@@ -474,3 +474,148 @@ class TestSymlinkRejection:
 
         files = bss_env._list_blink_files_recursive(bss_env.archive_dir)
         assert len(files) == 0
+
+
+class TestRecursiveDepthLimit:
+    """_list_blink_files_recursive respects depth limits."""
+
+    def test_deeply_nested_files_excluded(self, bss_env):
+        """Files beyond max_depth are not returned."""
+        deep = bss_env.archive_dir / "a" / "b" / "c" / "d" / "e"
+        deep.mkdir(parents=True)
+        (deep / "deep.md").write_text(
+            "Born from: Origin\n\nDeep file. Very deep.\n\nLineage: X\n",
+            encoding="utf-8",
+        )
+        files = bss_env._list_blink_files_recursive(
+            bss_env.archive_dir, max_depth=3
+        )
+        assert len(files) == 0
+
+    def test_within_depth_files_included(self, bss_env):
+        """Files within max_depth are returned."""
+        shallow = bss_env.archive_dir / "2026-Q1"
+        shallow.mkdir()
+        blink = _make_blink(99, relational="^")
+        write_blink(blink, shallow)
+        files = bss_env._list_blink_files_recursive(
+            bss_env.archive_dir, max_depth=3
+        )
+        assert len(files) == 1
+
+
+# ============================================================
+# Sequence Locking Tests
+# ============================================================
+
+
+class TestSequenceLocking:
+    """File-based locking for next_sequence()."""
+
+    def test_lock_file_created(self, bss_env):
+        """next_sequence() creates a .bss.lock file."""
+        bss_env.next_sequence()
+        assert (bss_env.root / ".bss.lock").exists()
+
+    def test_sequential_calls_increment(self, bss_env):
+        """Two sequential next_sequence() calls return consecutive values."""
+        blink = _make_blink(1, relational="^")
+        write_blink(blink, bss_env.active_dir)
+
+        seq1 = bss_env.next_sequence()
+        # Write a blink with seq1 so next call sees it
+        b2 = _make_blink(2)
+        write_blink(b2, bss_env.active_dir)
+
+        seq2 = bss_env.next_sequence()
+        assert seq1 != seq2
+
+
+# ============================================================
+# Register Artifact TOCTOU Tests
+# ============================================================
+
+
+class TestRegisterArtifactTOCTOU:
+    """Atomic artifact registration prevents TOCTOU races."""
+
+    def test_symlink_at_dest_rejected(self, bss_env, tmp_path):
+        """register_artifact rejects symlinks at destination."""
+        source = tmp_path / "code.py"
+        source.write_text("print('hello')")
+
+        blink_id = generate(sequence=1, author="A", relational="^",
+                            action_energy="~", action_valence="~",
+                            confidence="!", cognitive="!",
+                            domain="^", subdomain=";", scope="!",
+                            maturity=",", priority="=", sensitivity=".")
+
+        # Create a symlink at the artifact destination
+        dest = bss_env.artifacts_dir / "00001A-evil.py"
+        target = tmp_path / "target.py"
+        target.write_text("malicious")
+        try:
+            dest.symlink_to(target)
+        except OSError:
+            pytest.skip("Cannot create symlinks on this platform")
+
+        with pytest.raises(ValueError):
+            bss_env.register_artifact(blink_id, source, "evil")
+
+    def test_duplicate_artifact_rejected(self, bss_env, tmp_path):
+        """register_artifact rejects overwrite of existing artifact."""
+        source = tmp_path / "code.py"
+        source.write_text("print('hello')")
+
+        blink_id = generate(sequence=1, author="A", relational="^",
+                            action_energy="~", action_valence="~",
+                            confidence="!", cognitive="!",
+                            domain="^", subdomain=";", scope="!",
+                            maturity=",", priority="=", sensitivity=".")
+
+        # First registration succeeds
+        bss_env.register_artifact(blink_id, source, "module")
+
+        # Second registration with same slug fails
+        with pytest.raises(ValueError, match="already exists"):
+            bss_env.register_artifact(blink_id, source, "module")
+
+
+# ============================================================
+# Persistent Manifest Tests
+# ============================================================
+
+
+class TestPersistentManifest:
+    """Integrity manifest persists across BSSEnvironment instances."""
+
+    def test_manifest_created_on_scan(self, bss_env):
+        """Scanning creates .bss_manifest.json."""
+        blink = _make_blink(1, relational="^")
+        write_blink(blink, bss_env.active_dir)
+        bss_env.scan("active")
+        assert (bss_env.root / ".bss_manifest.json").exists()
+
+    def test_manifest_survives_new_instance(self, bss_env):
+        """A new BSSEnvironment reads hashes from manifest."""
+        blink = _make_blink(1, relational="^")
+        write_blink(blink, bss_env.active_dir)
+        bss_env.scan("active")
+
+        # Create a fresh environment instance (simulates new session)
+        env2 = BSSEnvironment(bss_env.root)
+        # Should pass immutability check via manifest, no KeyError
+        assert env2.check_immutability(blink.blink_id) is True
+
+    def test_tampering_detected_across_sessions(self, bss_env):
+        """Tampering detected even with a new BSSEnvironment instance."""
+        blink = _make_blink(1, relational="^")
+        filepath = write_blink(blink, bss_env.active_dir)
+        bss_env.scan("active")
+
+        # Tamper with the file
+        filepath.write_text("Tampered!", encoding="utf-8")
+
+        # New instance detects tampering via manifest
+        env2 = BSSEnvironment(bss_env.root)
+        assert env2.check_immutability(blink.blink_id) is False

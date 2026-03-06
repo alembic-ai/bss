@@ -150,7 +150,10 @@ def handoff(
         parent_path = env.find_blink(parent)
         if parent_path:
             parent_blink = read_blink(parent_path)
-            lineage = parent_blink.lineage[-6:] + [blink_id]  # Max 7
+            if parent_blink.lineage and isinstance(parent_blink.lineage, list):
+                lineage = parent_blink.lineage[-6:] + [blink_id]  # Max 7
+            else:
+                lineage = [parent, blink_id]
         else:
             lineage = [parent, blink_id]
     else:
@@ -216,7 +219,10 @@ def error_blink(
         parent_path = env.find_blink(parent)
         if parent_path:
             parent_blink = read_blink(parent_path)
-            lineage = parent_blink.lineage[-6:] + [blink_id]
+            if parent_blink.lineage and isinstance(parent_blink.lineage, list):
+                lineage = parent_blink.lineage[-6:] + [blink_id]
+            else:
+                lineage = [parent, blink_id]
         else:
             lineage = [parent, blink_id]
     else:

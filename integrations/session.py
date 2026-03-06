@@ -174,7 +174,10 @@ class BSSSession:
             parent_path = self.env.find_blink(parent_id)
             if parent_path:
                 parent_blink = read_blink(parent_path)
-                lineage = parent_blink.lineage[-6:] + [blink_id]
+                if parent_blink.lineage and isinstance(parent_blink.lineage, list):
+                    lineage = parent_blink.lineage[-6:] + [blink_id]
+                else:
+                    lineage = [parent_id, blink_id]
             else:
                 lineage = [parent_id, blink_id]
         else:

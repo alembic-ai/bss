@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import hashlib
+import json
+import os
 import re
+import sys
 import warnings
 from pathlib import Path
 
@@ -87,17 +90,37 @@ class BSSEnvironment:
             if not f.is_symlink() and self._is_within_root(f)
         )
 
-    def _list_blink_files_recursive(self, directory: Path) -> list[Path]:
+    def _list_blink_files_recursive(
+        self, directory: Path, max_depth: int = 3
+    ) -> list[Path]:
         """List all .md blink files in a directory and subdirectories.
 
         Rejects symlinks and paths that resolve outside the BSS root.
+        Limits recursion to max_depth levels to prevent DoS via deep nesting.
         """
         if not directory.exists():
             return []
-        return sorted(
-            f for f in directory.rglob("*.md")
-            if not f.is_symlink() and self._is_within_root(f)
-        )
+
+        results: list[Path] = []
+
+        def _walk(current: Path, depth: int) -> None:
+            if depth > max_depth:
+                return
+            try:
+                entries = sorted(current.iterdir())
+            except PermissionError:
+                return
+            for entry in entries:
+                if entry.is_symlink():
+                    continue
+                if entry.is_dir():
+                    _walk(entry, depth + 1)
+                elif entry.is_file() and entry.suffix == ".md":
+                    if self._is_within_root(entry):
+                        results.append(entry)
+
+        _walk(directory, 0)
+        return sorted(results)
 
     def scan(self, directory: str) -> list[BlinkFile]:
         """List and parse all blinks in a directory.
@@ -165,16 +188,49 @@ class BSSEnvironment:
 
         return highest
 
+    def _lock_path(self) -> Path:
+        """Path to the environment lock file."""
+        return self.root / ".bss.lock"
+
     def next_sequence(self) -> str:
         """Get the next available sequence number.
+
+        Uses file-based locking to prevent race conditions when multiple
+        processes access the same BSS environment.
 
         Returns:
             The next 5-char base-36 sequence.
         """
-        current = self.highest_sequence()
-        if current == "00000":
-            return "00001"
-        return next_sequence(current)
+        lock_path = self._lock_path()
+        lock_path.touch(exist_ok=True)
+
+        lock_fd = open(lock_path, "r+")
+        try:
+            # Acquire platform-appropriate file lock
+            if sys.platform == "win32":
+                import msvcrt
+                msvcrt.locking(lock_fd.fileno(), msvcrt.LK_LOCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX)
+
+            # Critical section: read highest and increment
+            current = self.highest_sequence()
+            if current == "00000":
+                return "00001"
+            return next_sequence(current)
+        finally:
+            # Release lock
+            if sys.platform == "win32":
+                import msvcrt
+                try:
+                    msvcrt.locking(lock_fd.fileno(), msvcrt.LK_UNLCK, 1)
+                except OSError:
+                    pass
+            else:
+                import fcntl
+                fcntl.flock(lock_fd.fileno(), fcntl.LOCK_UN)
+            lock_fd.close()
 
     def find_blink(self, blink_id: str) -> Path | None:
         """Search all directories for a blink by ID.
@@ -281,14 +337,47 @@ class BSSEnvironment:
 
         return dest
 
+    def _manifest_path(self) -> Path:
+        """Path to the persistent integrity manifest."""
+        return self.root / ".bss_manifest.json"
+
+    def _load_manifest(self) -> dict[str, str]:
+        """Load persistent hashes from manifest file, if it exists."""
+        path = self._manifest_path()
+        if path.exists():
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                return {}
+        return {}
+
+    def _save_manifest(self) -> None:
+        """Persist current integrity hashes to manifest file."""
+        path = self._manifest_path()
+        # Merge with existing manifest (other sessions may have added entries)
+        existing = self._load_manifest()
+        existing.update(self._integrity_hashes)
+        path.write_text(
+            json.dumps(existing, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+
     def _record_integrity(self, blink_id: str, filepath: Path) -> None:
         """Record a hash of a blink's content for integrity checking."""
         if blink_id not in self._integrity_hashes:
-            content = filepath.read_bytes()
-            self._integrity_hashes[blink_id] = hashlib.sha256(content).hexdigest()
+            # Check persistent manifest first
+            manifest = self._load_manifest()
+            if blink_id in manifest:
+                self._integrity_hashes[blink_id] = manifest[blink_id]
+            else:
+                content = filepath.read_bytes()
+                self._integrity_hashes[blink_id] = hashlib.sha256(content).hexdigest()
+                self._save_manifest()
 
     def check_immutability(self, blink_id: str) -> bool:
         """Verify a blink hasn't been tampered with since first read.
+
+        Checks both in-memory hashes and the persistent .bss_manifest.json.
 
         Args:
             blink_id: The blink identifier to check.
@@ -301,10 +390,15 @@ class BSSEnvironment:
             KeyError: If the blink was never read (no recorded hash).
         """
         if blink_id not in self._integrity_hashes:
-            raise KeyError(
-                f"No integrity hash recorded for '{blink_id}'. "
-                "Read the blink first to establish a baseline."
-            )
+            # Try loading from persistent manifest
+            manifest = self._load_manifest()
+            if blink_id in manifest:
+                self._integrity_hashes[blink_id] = manifest[blink_id]
+            else:
+                raise KeyError(
+                    f"No integrity hash recorded for '{blink_id}'. "
+                    "Read the blink first to establish a baseline."
+                )
 
         filepath = self.find_blink(blink_id)
         if filepath is None:
@@ -386,8 +480,20 @@ class BSSEnvironment:
         if not dest.resolve().is_relative_to(self.artifacts_dir.resolve()):
             raise ValueError("Artifact path escapes artifacts directory")
 
-        import shutil
-        shutil.copy2(filepath, dest)
+        # Reject symlinks at destination to prevent TOCTOU attacks
+        if dest.exists() or dest.is_symlink():
+            raise ValueError(
+                f"Artifact '{artifact_name}' already exists or is a symlink"
+            )
+
+        # Atomic file creation: O_CREAT | O_EXCL prevents TOCTOU races
+        source_bytes = filepath.read_bytes()
+        fd = os.open(str(dest), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+        try:
+            os.write(fd, source_bytes)
+        finally:
+            os.close(fd)
+
         return dest
 
     def list_artifacts(self) -> list[Path]:
