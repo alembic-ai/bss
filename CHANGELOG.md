@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.1.0 — Immutability Enforcement & Cross-Platform Fixes
+
+### Features
+- `bss init --defaults` non-interactive mode for CI/scripting
+- Blink immutability enforced at write time (FileExistsError on overwrite)
+
+### Fixes
+- Python 3.11 compatibility: f-string backslash in CLI
+- Windows compatibility: UTF-8 encoding for roster config round-trip
+- Textual tests gracefully skipped when dependency not installed
+- pyyaml moved to `[dev]` extras (no longer needs separate install in CI)
+
+### Infrastructure
+- CI now passes on all 9 matrix targets (3 OS x 3 Python versions)
+- Test count: 498 → 499
+- Version bump: 1.0.0 → 1.1.0
+
 ## v1.0.1 — Security Hardening & Relay Fix
 
 ### Fixes

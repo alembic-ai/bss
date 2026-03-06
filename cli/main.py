@@ -65,6 +65,7 @@ def _get_env(path: Optional[Path] = None) -> BSSEnvironment:
 @app.command()
 def init(
     path: Optional[Path] = typer.Argument(None, help="Directory to initialize (default: current)"),
+    defaults: bool = typer.Option(False, "--defaults", help="Non-interactive mode with sensible defaults (for CI/scripting)"),
 ):
     """Initialize a new BSS environment."""
     root = path or Path.cwd()
@@ -83,36 +84,47 @@ def init(
     console.print(f"  [green]\u2192[/green] Created /artifacts/")
     console.print()
 
-    # Roster setup
-    console.print("  [bold]Let's set up your roster.[/bold]")
-    console.print()
+    if defaults:
+        # Non-interactive: single model with sensible defaults
+        entries = [RosterEntry(
+            sigil="A",
+            model_id="Model-A",
+            role="primary",
+            scope_ceiling="global",
+            notes="",
+        )]
+        num_models = 1
+    else:
+        # Interactive roster setup
+        console.print("  [bold]Let's set up your roster.[/bold]")
+        console.print()
 
-    num_models = typer.prompt("  How many AI models will participate?", default=1, type=int)
+        num_models = typer.prompt("  How many AI models will participate?", default=1, type=int)
 
-    entries: list[RosterEntry] = []
-    default_sigils = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        entries: list[RosterEntry] = []
+        default_sigils = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-    for i in range(num_models):
-        console.print(f"\n  [bold]Model {i + 1}:[/bold]")
-        name = typer.prompt("    Name/identifier", default=f"Model-{default_sigils[i]}")
-        sigil = typer.prompt("    Author sigil", default=default_sigils[i])
-        role = typer.prompt(
-            "    Role (primary/reviewer/specialist/architect)",
-            default="primary" if i == 0 else "reviewer",
-        )
-        ceiling = typer.prompt(
-            "    Scope ceiling (atomic/local/regional/global)",
-            default="global" if i == 0 else "local",
-        )
-        notes = typer.prompt("    Notes (optional)", default="")
+        for i in range(num_models):
+            console.print(f"\n  [bold]Model {i + 1}:[/bold]")
+            name = typer.prompt("    Name/identifier", default=f"Model-{default_sigils[i]}")
+            sigil = typer.prompt("    Author sigil", default=default_sigils[i])
+            role = typer.prompt(
+                "    Role (primary/reviewer/specialist/architect)",
+                default="primary" if i == 0 else "reviewer",
+            )
+            ceiling = typer.prompt(
+                "    Scope ceiling (atomic/local/regional/global)",
+                default="global" if i == 0 else "local",
+            )
+            notes = typer.prompt("    Notes (optional)", default="")
 
-        entries.append(RosterEntry(
-            sigil=sigil.upper(),
-            model_id=name,
-            role=role,
-            scope_ceiling=ceiling,
-            notes=notes,
-        ))
+            entries.append(RosterEntry(
+                sigil=sigil.upper(),
+                model_id=name,
+                role=role,
+                scope_ceiling=ceiling,
+                notes=notes,
+            ))
 
     console.print()
 

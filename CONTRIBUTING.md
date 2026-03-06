@@ -54,7 +54,7 @@ Run tests:
 pytest tests/ -v
 ```
 
-All 498 tests should pass. If any fail on your setup, that's a bug — please report it.
+All 499 tests should pass. If any fail on your setup, that's a bug — please report it.
 
 ## Code Style
 
