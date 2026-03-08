@@ -35,3 +35,22 @@ Thumbs.db
 integrations/config.yaml
 mind/
 *.gguf
+
+# Generated/temporary files
+.bss.lock
+.bss_manifest.json
+.bss_v2_setup_complete
+.bss_v3_setup_complete
+
+# Report and analysis files
+ANALYSIS_REPORT.md
+SECURITY_AUDIT*.md
+SECURITY_GAPS.md
+VISUAL_GUIDE.md
+FIGMA_TEMPLATE_SETUP.md
+
+# Data directories
+active/
+relay/
+profile/
+archive/
