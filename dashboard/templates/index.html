@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BSS Dashboard — Blink Sigil System</title>
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <!-- CDN: Cytoscape.js for knowledge graph -->
+    <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
+    <script src="https://unpkg.com/cytoscape-fcose@2.2.0/cytoscape-fcose.js"></script>
+    <!-- CDN: Chart.js for analytics -->
+    <script src="https://unpkg.com/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <!-- ═══════════════════ HEADER ═══════════════════ -->
+    <header class="top-bar">
+        <div class="logo">
+            <span class="logo-icon">◈</span>
+            <span class="logo-text">BSS</span>
+            <span class="logo-sub">Blink Sigil System</span>
+        </div>
+        <nav class="nav-tabs">
+            <button class="nav-tab active" data-panel="overview">Overview</button>
+            <button class="nav-tab" data-panel="chat">Chat</button>
+            <button class="nav-tab" data-panel="taskboard">Tasks</button>
+            <button class="nav-tab" data-panel="graph">Graph</button>
+            <button class="nav-tab" data-panel="analytics">Analytics</button>
+            <button class="nav-tab" data-panel="timeline">Timeline</button>
+            <div class="nav-dropdown">
+                <button class="nav-tab nav-dropdown-trigger" data-dropdown="tools">More ▾</button>
+                <div class="nav-dropdown-menu" id="tools-dropdown">
+                    <button class="nav-dropdown-item" data-panel="conversations">Conversations</button>
+                    <button class="nav-dropdown-item" data-panel="feed">Activity Feed</button>
+                    <button class="nav-dropdown-item" data-panel="relay">Relay Queue</button>
+                    <button class="nav-dropdown-item" data-panel="search">Search</button>
+                    <button class="nav-dropdown-item" data-panel="composer">Blink Composer</button>
+                    <button class="nav-dropdown-item" data-panel="runner">Relay Runner</button>
+                    <button class="nav-dropdown-item" data-panel="convergence">Convergence</button>
+                    <button class="nav-dropdown-item" data-panel="artifacts">Artifacts</button>
+                    <button class="nav-dropdown-item" data-panel="health">Health / Models</button>
+                    <button class="nav-dropdown-item" data-panel="export">Export Report</button>
+                    <button class="nav-dropdown-item" data-panel="glossary">Glossary</button>
+                    <button class="nav-dropdown-item" data-panel="lineage">Lineage</button>
+                    <button class="nav-dropdown-item" data-panel="grammar">ID Grammar</button>
+                    <button class="nav-dropdown-item" data-panel="reference">Reference</button>
+                    <div class="nav-dropdown-divider"></div>
+                    <button class="nav-dropdown-item" data-panel="settings">&#x2699; Settings</button>
+                </div>
+            </div>
+            <button class="nav-cmd-btn" onclick="openCommandPalette()" title="Command Palette (Ctrl+K)">&#x2318;K</button>
+        </nav>
+        <div class="status-pill" id="status-pill">
+            <span class="pulse"></span>
+            <span id="status-text">Connecting...</span>
+        </div>
+    </header>
+
+    <!-- ═══════════════════ OVERVIEW PANEL ═══════════════════ -->
+    <main id="panel-overview" class="panel active">
+        <section class="stat-cards">
+            <div class="stat-card" data-dir="relay">
+                <div class="stat-icon">⬆</div>
+                <div class="stat-value" id="stat-relay">—</div>
+                <div class="stat-label">Relay Queue</div>
+                <div class="stat-bar"><div class="stat-bar-fill" id="bar-relay"></div></div>
+            </div>
+            <div class="stat-card" data-dir="active">
+                <div class="stat-icon">⚡</div>
+                <div class="stat-value" id="stat-active">—</div>
+                <div class="stat-label">Active</div>
+                <div class="stat-bar"><div class="stat-bar-fill" id="bar-active"></div></div>
+            </div>
+            <div class="stat-card" data-dir="profile">
+                <div class="stat-icon">👤</div>
+                <div class="stat-value" id="stat-profile">—</div>
+                <div class="stat-label">Profile</div>
+                <div class="stat-bar"><div class="stat-bar-fill" id="bar-profile"></div></div>
+            </div>
+            <div class="stat-card" data-dir="archive">
+                <div class="stat-icon">📦</div>
+                <div class="stat-value" id="stat-archive">—</div>
+                <div class="stat-label">Archive</div>
+                <div class="stat-bar"><div class="stat-bar-fill" id="bar-archive"></div></div>
+            </div>
+            <div class="stat-card" data-dir="artifacts">
+                <div class="stat-icon">🔧</div>
+                <div class="stat-value" id="stat-artifacts">—</div>
+                <div class="stat-label">Artifacts</div>
+                <div class="stat-bar"><div class="stat-bar-fill" id="bar-artifacts"></div></div>
+            </div>
+            <div class="stat-card accent">
+                <div class="stat-icon">🔢</div>
+                <div class="stat-value" id="stat-sequence">—</div>
+                <div class="stat-label">Next Sequence</div>
+            </div>
+        </section>
+        <section class="dashboard-grid">
+            <div class="card lifecycle-card">
+                <div class="card-header">
+                    <h3>Session Lifecycle</h3>
+                    <button class="btn-icon" id="lifecycle-play" title="Animate">▶</button>
+                </div>
+                <div class="lifecycle-diagram" id="lifecycle-diagram">
+                    <div class="phase-node" data-phase="INTAKE" id="phase-intake">
+                        <div class="phase-ring"><div class="phase-inner">1</div></div>
+                        <span class="phase-label">INTAKE</span>
+                        <span class="phase-desc">Read context</span>
+                    </div>
+                    <div class="phase-arrow">→</div>
+                    <div class="phase-node" data-phase="TRIAGE" id="phase-triage">
+                        <div class="phase-ring"><div class="phase-inner">2</div></div>
+                        <span class="phase-label">TRIAGE</span>
+                        <span class="phase-desc">Prioritize</span>
+                    </div>
+                    <div class="phase-arrow">→</div>
+                    <div class="phase-node" data-phase="WORK" id="phase-work">
+                        <div class="phase-ring"><div class="phase-inner">3</div></div>
+                        <span class="phase-label">WORK</span>
+                        <span class="phase-desc">Process</span>
+                    </div>
+                    <div class="phase-arrow">→</div>
+                    <div class="phase-node" data-phase="OUTPUT" id="phase-output">
+                        <div class="phase-ring"><div class="phase-inner">4</div></div>
+                        <span class="phase-label">OUTPUT</span>
+                        <span class="phase-desc">Write results</span>
+                    </div>
+                    <div class="phase-arrow">→</div>
+                    <div class="phase-node" data-phase="DORMANCY" id="phase-dormancy">
+                        <div class="phase-ring"><div class="phase-inner">5</div></div>
+                        <span class="phase-label">DORMANCY</span>
+                        <span class="phase-desc">Sleep</span>
+                    </div>
+                </div>
+                <div class="phase-detail" id="phase-detail">
+                    <p class="phase-detail-text">Click a phase to see details</p>
+                </div>
+            </div>
+            <div class="card roster-card">
+                <div class="card-header"><h3>Model Roster</h3></div>
+                <div class="roster-table" id="roster-table">
+                    <div class="roster-empty">Loading roster...</div>
+                </div>
+            </div>
+            <div class="card errors-card">
+                <div class="card-header">
+                    <h3>Error Chains</h3>
+                    <span class="badge" id="error-count">0</span>
+                </div>
+                <div class="error-list" id="error-list">
+                    <div class="no-errors">No error escalation chains detected</div>
+                </div>
+            </div>
+            <div class="card recent-card">
+                <div class="card-header"><h3>Recent Activity</h3></div>
+                <div class="recent-list" id="recent-list">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ═══════════════════ GRAPH PANEL ═══════════════════ -->
+    <main id="panel-graph" class="panel">
+        <div class="graph-toolbar">
+            <div class="filter-group">
+                <label>Cluster by:</label>
+                <select id="graph-cluster-by">
+                    <option value="none">None</option>
+                    <option value="author">Author</option>
+                    <option value="domain">Domain</option>
+                    <option value="directory">Directory</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Author:</label>
+                <select id="graph-author-filter">
+                    <option value="">All</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <input type="text" id="graph-search" placeholder="Search nodes..." class="graph-search-input">
+            </div>
+            <button class="btn-icon" id="graph-fit" onclick="BSS.panels.graph.fit()" title="Fit to screen">⊞</button>
+            <button class="btn-icon" id="graph-relayout" onclick="BSS.panels.graph.relayout()" title="Re-layout">↻</button>
+        </div>
+        <div class="graph-container">
+            <div id="graph-container" class="graph-canvas"></div>
+            <div class="graph-detail-panel" id="graph-detail-panel">
+                <div class="graph-detail-empty">Click a node to see details</div>
+            </div>
+        </div>
+        <div class="graph-legend" id="graph-legend">
+            <div class="legend-section">
+                <strong>Shapes:</strong>
+                <span class="legend-item"><span class="legend-shape star">★</span> Origin</span>
+                <span class="legend-item"><span class="legend-shape diamond">◆</span> Branch</span>
+                <span class="legend-item"><span class="legend-shape hexagon">⬡</span> Convergence</span>
+                <span class="legend-item"><span class="legend-shape ellipse">●</span> Continuation</span>
+                <span class="legend-item"><span class="legend-shape rect">■</span> Dead-end</span>
+            </div>
+            <div class="legend-section">
+                <strong>Edges:</strong>
+                <span class="legend-item"><span class="legend-line born-from"></span> Born from</span>
+                <span class="legend-item"><span class="legend-line link"></span> Link</span>
+                <span class="legend-item"><span class="legend-line error-chain"></span> Error chain</span>
+            </div>
+        </div>
+    </main>
+
+    <!-- ═══════════════════ ANALYTICS PANEL ═══════════════════ -->
+    <main id="panel-analytics" class="panel">
+        <section class="analytics-grid">
+            <div class="card chart-card">
+                <div class="card-header"><h3>Domain Distribution</h3></div>
+                <div class="chart-container"><canvas id="chart-domain"></canvas></div>
+            </div>
+            <div class="card chart-card">
+                <div class="card-header"><h3>Scope Distribution</h3></div>
+                <div class="chart-container"><canvas id="chart-scope"></canvas></div>
+            </div>
+            <div class="card chart-card">
+                <div class="card-header"><h3>Action States</h3></div>
+                <div class="chart-container"><canvas id="chart-action"></canvas></div>
+            </div>
+            <div class="card chart-card">
+                <div class="card-header"><h3>Relational Types</h3></div>
+                <div class="chart-container"><canvas id="chart-relational"></canvas></div>
+            </div>
+        </section>
+        <section class="analytics-row">
+            <div class="card heatmap-card">
+                <div class="card-header"><h3>Activity Heatmap</h3></div>
+                <div class="heatmap-container" id="heatmap-container">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+        </section>
+        <section class="analytics-row">
+            <div class="card leaderboard-card">
+                <div class="card-header"><h3>Author Leaderboard</h3></div>
+                <div class="leaderboard-table" id="author-leaderboard">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ═══════════════════ TIMELINE PANEL ═══════════════════ -->
+    <main id="panel-timeline" class="panel">
+        <section class="timeline-controls">
+            <div class="filter-group">
+                <label>Filter by Author:</label>
+                <select id="timeline-sigil-filter">
+                    <option value="">All</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Directory:</label>
+                <select id="timeline-dir-filter">
+                    <option value="all">All</option>
+                    <option value="relay">Relay</option>
+                    <option value="active">Active</option>
+                    <option value="profile">Profile</option>
+                    <option value="archive">Archive</option>
+                </select>
+            </div>
+            <button class="btn-refresh" onclick="loadTimeline()">Refresh</button>
+        </section>
+        <section class="timeline-chart" id="timeline-chart"></section>
+        <section class="timeline-list" id="timeline-list">
+            <div class="loading-spinner"></div>
+        </section>
+    </main>
+
+    <!-- ═══════════════════ RELAY PANEL ═══════════════════ -->
+    <main id="panel-relay" class="panel">
+        <div class="card full-width">
+            <div class="card-header">
+                <h3>Relay Queue (Triaged)</h3>
+                <span class="badge" id="relay-count-badge">0</span>
+            </div>
+            <div class="relay-queue" id="relay-queue">
+                <div class="loading-spinner"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ═══════════════════ SEARCH PANEL ═══════════════════ -->
+    <main id="panel-search" class="panel">
+        <div class="card full-width">
+            <div class="card-header"><h3>Search Blinks</h3></div>
+            <div class="search-bar">
+                <input type="text" id="search-input" placeholder="Search across all blink summaries..." spellcheck="false">
+            </div>
+            <div class="search-results" id="search-results">
+                <div class="roster-empty">Type to search across all blink summaries</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ═══════════════════ COMPOSER PANEL ═══════════════════ -->
+    <main id="panel-composer" class="panel">
+        <div class="card full-width">
+            <div class="card-header"><h3>Blink Composer</h3></div>
+            <div class="composer-form">
+                <div class="composer-row">
+                    <label>Summary (2+ sentences):</label>
+                    <textarea id="composer-summary" rows="4" placeholder="Describe the blink content. Must have at least 2 sentences."></textarea>
+                </div>
+                <div class="composer-grid">
+                    <div class="composer-field">
+                        <label>Author Sigil:</label>
+                        <select id="composer-author"><option value="">Select...</option></select>
+                    </div>
+                    <div class="composer-field">
+                        <label>Action Energy:</label>
+                        <select id="composer-energy">
+                            <option value="~">~ Reactive</option>
+                            <option value="!">! Proactive</option>
+                            <option value=".">. Neutral</option>
+                        </select>
+                    </div>
+                    <div class="composer-field">
+                        <label>Action Valence:</label>
+                        <select id="composer-valence">
+                            <option value="!">! Creative</option>
+                            <option value="~">~ Corrective</option>
+                            <option value=".">. Maintenance</option>
+                        </select>
+                    </div>
+                    <div class="composer-field">
+                        <label>Domain:</label>
+                        <select id="composer-domain">
+                            <option value="#"># Technical</option>
+                            <option value="@">@ Social</option>
+                            <option value="!">! Urgent</option>
+                            <option value=".">. General</option>
+                        </select>
+                    </div>
+                    <div class="composer-field">
+                        <label>Subdomain:</label>
+                        <select id="composer-subdomain">
+                            <option value=".">. General</option>
+                            <option value="!">! Critical</option>
+                            <option value="#"># Specialized</option>
+                        </select>
+                    </div>
+                    <div class="composer-field">
+                        <label>Scope:</label>
+                        <select id="composer-scope">
+                            <option value=".">. Atomic</option>
+                            <option value="-">- Local</option>
+                            <option value="=">= Regional</option>
+                            <option value="!">! Global</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="composer-row">
+                    <label>Parent Blink ID (optional):</label>
+                    <input type="text" id="composer-parent" placeholder="17-char blink ID of parent..." maxlength="17" spellcheck="false">
+                </div>
+                <div class="composer-actions">
+                    <button class="btn-primary" onclick="composeBlink()">Create Blink</button>
+                </div>
+                <div class="composer-result" id="composer-result"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ═══════════════════ CONVERGENCE PANEL ═══════════════════ -->
+    <main id="panel-convergence" class="panel">
+        <div class="card full-width">
+            <div class="card-header">
+                <h3>Convergence Manager</h3>
+                <span class="badge" id="convergence-count">0</span>
+            </div>
+            <div class="convergence-list" id="convergence-list">
+                <div class="loading-spinner"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ═══════════════════ RUNNER PANEL ═══════════════════ -->
+    <main id="panel-runner" class="panel">
+        <div class="card full-width">
+            <div class="card-header">
+                <h3>Live Relay Runner</h3>
+                <span id="runner-status" style="font-size:12px;color:var(--text-muted)">Stopped</span>
+            </div>
+            <div class="runner-controls">
+                <div class="runner-sigils" id="runner-sigils"></div>
+                <div class="runner-options">
+                    <label>Max Rounds:</label>
+                    <input type="number" id="runner-max-rounds" value="10" min="1" max="100" style="width:60px">
+                    <button class="btn-primary" onclick="startRelay()">Start</button>
+                    <button class="btn-danger" onclick="stopRelay()">Stop</button>
+                </div>
+            </div>
+            <div class="runner-log" id="runner-log">
+                <div class="roster-empty">Configure sigils and click Start to begin a relay run</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ═══════════════════ HEALTH PANEL ═══════════════════ -->
+    <main id="panel-health" class="panel">
+        <section class="health-grid">
+            <div class="card">
+                <div class="card-header"><h3>Health Checks</h3></div>
+                <div class="health-checks" id="health-checks">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header"><h3>Artifacts</h3></div>
+                <div class="artifacts-list" id="artifacts-list">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header"><h3>Model Status</h3></div>
+                <div class="models-list" id="models-list">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ═══════════════════ LINEAGE PANEL ═══════════════════ -->
+    <main id="panel-lineage" class="panel">
+        <div class="lineage-controls">
+            <label>Blink ID:</label>
+            <input type="text" id="lineage-input" placeholder="Enter a blink ID to trace lineage..." maxlength="17">
+            <button class="btn-primary" onclick="loadLineage()">Trace</button>
+        </div>
+        <div class="lineage-tree" id="lineage-tree">
+            <div class="lineage-empty">Enter a blink ID above to visualize its ancestry chain</div>
+        </div>
+        <div class="lineage-info" id="lineage-info"></div>
+    </main>
+
+    <!-- ═══════════════════ GRAMMAR PANEL ═══════════════════ -->
+    <main id="panel-grammar" class="panel">
+        <div class="card full-width">
+            <div class="card-header"><h3>Blink ID Grammar Explorer</h3></div>
+            <div class="grammar-explorer">
+                <div class="grammar-input-row">
+                    <label>Blink ID:</label>
+                    <input type="text" id="grammar-input" placeholder="Enter or paste a 17-char blink ID..." maxlength="17" spellcheck="false">
+                    <button class="btn-primary" onclick="analyzeGrammar()">Analyze</button>
+                </div>
+                <div class="grammar-visual" id="grammar-visual">
+                    <div class="grammar-placeholder">
+                        <p>The BSS blink ID is a 17-character positional grammar encoding rich metadata.</p>
+                        <p class="grammar-format">
+                            <span class="gp seq">00001</span><span class="gp author">A</span><span class="gp action">~!</span><span class="gp rel">}</span><span class="gp conf">!</span><span class="gp cog">^</span><span class="gp dom">#</span><span class="gp sub">!</span><span class="gp scope">=</span><span class="gp mat">~</span><span class="gp pri">^</span><span class="gp sens">=</span>
+                        </p>
+                        <p class="grammar-legend">
+                            <span class="gl seq">Sequence</span>
+                            <span class="gl author">Author</span>
+                            <span class="gl action">Action</span>
+                            <span class="gl rel">Relational</span>
+                            <span class="gl conf">Confidence</span>
+                            <span class="gl cog">Cognitive</span>
+                            <span class="gl dom">Domain</span>
+                            <span class="gl sub">Subdomain</span>
+                            <span class="gl scope">Scope</span>
+                            <span class="gl mat">Maturity</span>
+                            <span class="gl pri">Priority</span>
+                            <span class="gl sens">Sensitivity</span>
+                        </p>
+                    </div>
+                </div>
+                <div class="grammar-breakdown" id="grammar-breakdown"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ═══════════════════ CHAT PANEL ═══════════════════ -->
+    <main id="panel-chat" class="panel">
+        <div class="chat-layout">
+            <div class="chat-header-bar">
+                <div class="chat-controls">
+                    <select id="chat-sigil" class="chat-sigil-select">
+                        <option value="">Select model...</option>
+                        <option value="__swarm__">Swarm (auto)</option>
+                    </select>
+                    <button class="btn-icon" onclick="clearChat()" title="Clear chat">&#x1F5D1;</button>
+                </div>
+            </div>
+            <div class="chat-messages" id="chat-messages">
+                <div class="chat-welcome">
+                    <div class="chat-welcome-icon">&#x25C8;</div>
+                    <div class="chat-welcome-title">Talk to your Swarm</div>
+                    <div class="chat-welcome-sub">Select a model and send a message. The model reads your relay state, processes your request, and writes a handoff blink with its response.</div>
+                </div>
+            </div>
+            <div class="chat-input-bar">
+                <textarea id="chat-input" class="chat-input" placeholder="Type a message to your swarm..." rows="1" onkeydown="sendChatOnEnter(event)"></textarea>
+                <button class="btn-primary chat-send-btn" onclick="sendChatMessage()">Send</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- ═══════════════════ TASK BOARD PANEL ═══════════════════ -->
+    <main id="panel-taskboard" class="panel">
+        <div class="taskboard">
+            <div class="task-column">
+                <div class="task-col-header"><span>&#x23F3; Queued</span><span class="task-col-count badge">0</span></div>
+                <div class="task-col-items" id="task-col-queued"><div class="loading-spinner"></div></div>
+            </div>
+            <div class="task-column">
+                <div class="task-col-header"><span>&#x26A1; In Progress</span><span class="task-col-count badge">0</span></div>
+                <div class="task-col-items" id="task-col-in_progress"><div class="loading-spinner"></div></div>
+            </div>
+            <div class="task-column">
+                <div class="task-col-header"><span>&#x2713; Completed</span><span class="task-col-count badge">0</span></div>
+                <div class="task-col-items" id="task-col-completed"><div class="loading-spinner"></div></div>
+            </div>
+            <div class="task-column task-col-errors">
+                <div class="task-col-header"><span>&#x2717; Errors</span><span class="task-col-count badge">0</span></div>
+                <div class="task-col-items" id="task-col-errors"><div class="loading-spinner"></div></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ═══════════════════ CONVERSATIONS PANEL ═══════════════════ -->
+    <main id="panel-conversations" class="panel">
+        <div class="convo-layout">
+            <div class="convo-sidebar">
+                <div class="convo-sidebar-header"><h3>Threads</h3></div>
+                <div class="convo-thread-list" id="convo-thread-list">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+            <div class="convo-main">
+                <div class="convo-view" id="convo-view">
+                    <div class="roster-empty">Select a thread to view the conversation</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ═══════════════════ ACTIVITY FEED PANEL ═══════════════════ -->
+    <main id="panel-feed" class="panel">
+        <div class="card full-width">
+            <div class="card-header"><h3>Activity Feed</h3></div>
+            <div class="feed-list" id="feed-list">
+                <div class="loading-spinner"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ═══════════════════ ARTIFACTS PANEL ═══════════════════ -->
+    <main id="panel-artifacts" class="panel">
+        <div class="card full-width">
+            <div class="card-header"><h3>Artifact Viewer</h3></div>
+            <div class="artifacts-viewer" id="artifacts-viewer">
+                <div class="loading-spinner"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ═══════════════════ EXPORT PANEL ═══════════════════ -->
+    <main id="panel-export" class="panel">
+        <div class="card full-width">
+            <div class="card-header"><h3>Export Report</h3></div>
+            <div class="export-form">
+                <div class="export-row">
+                    <label>Report Title:</label>
+                    <input type="text" id="export-title" value="BSS Swarm Report" placeholder="Report title...">
+                </div>
+                <div class="export-row">
+                    <label>Format:</label>
+                    <select id="export-format">
+                        <option value="markdown">Markdown</option>
+                        <option value="json">JSON</option>
+                    </select>
+                </div>
+                <div class="export-row">
+                    <label>Sections to include:</label>
+                    <div class="export-sections" id="export-sections">
+                        <label><input type="checkbox" value="summary" checked> Summary</label>
+                        <label><input type="checkbox" value="roster" checked> Roster</label>
+                        <label><input type="checkbox" value="analytics" checked> Analytics</label>
+                        <label><input type="checkbox" value="blinks" checked> Recent Blinks</label>
+                        <label><input type="checkbox" value="errors" checked> Errors</label>
+                        <label><input type="checkbox" value="health"> Health Status</label>
+                    </div>
+                </div>
+                <div class="export-row">
+                    <label>Filter by authors:</label>
+                    <div class="export-authors" id="export-authors"></div>
+                </div>
+                <div class="export-actions">
+                    <button class="btn-primary" onclick="generateReport()">Generate Report</button>
+                </div>
+                <div class="export-result" id="export-result"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ═══════════════════ GLOSSARY PANEL ═══════════════════ -->
+    <main id="panel-glossary" class="panel">
+        <div class="card full-width">
+            <div class="card-header"><h3>BSS Glossary</h3></div>
+            <div class="glossary-search-bar">
+                <input type="text" id="glossary-search" placeholder="Search terms..." spellcheck="false">
+            </div>
+            <div class="glossary-list" id="glossary-list"></div>
+        </div>
+    </main>
+
+    <!-- ═══════════════════ REFERENCE PANEL ═══════════════════ -->
+    <main id="panel-reference" class="panel">
+        <div class="reference-grid" id="reference-grid">
+            <div class="loading-spinner"></div>
+        </div>
+    </main>
+
+    <!-- ═══════════════════ SETTINGS PANEL ═══════════════════ -->
+    <main id="panel-settings" class="panel">
+        <div id="settings-content">
+            <div class="loading-spinner"></div>
+        </div>
+    </main>
+
+    <!-- ═══════════════════ COMMAND PALETTE ═══════════════════ -->
+    <div class="cmd-palette-overlay" id="cmd-palette-overlay">
+        <div class="cmd-palette">
+            <input type="text" id="cmd-palette-input" class="cmd-palette-input" placeholder="Type a command..." spellcheck="false" autocomplete="off">
+            <div class="cmd-palette-results" id="cmd-palette-results"></div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════ BLINK DETAIL MODAL ═══════════════════ -->
+    <div class="modal-overlay" id="blink-modal">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <div class="modal-content" id="modal-content"></div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════ TOAST CONTAINER ═══════════════════ -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Modular JS (order matters: core first, then panels) -->
+    <script src="/static/js/core.js"></script>
+    <script src="/static/js/overview.js"></script>
+    <script src="/static/js/timeline.js"></script>
+    <script src="/static/js/relay.js"></script>
+    <script src="/static/js/lineage.js"></script>
+    <script src="/static/js/grammar.js"></script>
+    <script src="/static/js/reference.js"></script>
+    <script src="/static/js/graph.js"></script>
+    <script src="/static/js/analytics.js"></script>
+    <script src="/static/js/search.js"></script>
+    <script src="/static/js/composer.js"></script>
+    <script src="/static/js/convergence.js"></script>
+    <script src="/static/js/runner.js"></script>
+    <script src="/static/js/health.js"></script>
+    <script src="/static/js/chat.js"></script>
+    <script src="/static/js/taskboard.js"></script>
+    <script src="/static/js/conversations.js"></script>
+    <script src="/static/js/cmdpalette.js"></script>
+    <script src="/static/js/feed.js"></script>
+    <script src="/static/js/artifacts.js"></script>
+    <script src="/static/js/glossary.js"></script>
+    <script src="/static/js/export.js"></script>
+    <script src="/static/js/settings.js"></script>
+</body>
+</html>
