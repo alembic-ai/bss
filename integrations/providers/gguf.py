@@ -40,7 +40,11 @@ class GGUFProvider(Provider):
                 verbose=False,
             )
             return True
-        except Exception:
+        except Exception as exc:
+            import logging
+            logging.getLogger("bss.provider.gguf").error(
+                "Failed to load GGUF model '%s': %s", model_path, exc,
+            )
             self._model = None
             return False
 

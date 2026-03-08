@@ -22,13 +22,19 @@ class RelayRunner:
     Auto mode: auto_run(sigils) alternates models automatically.
     """
 
-    def __init__(self, env: BSSEnvironment, model_manager: ModelManager):
+    def __init__(
+        self,
+        env: BSSEnvironment,
+        model_manager: ModelManager,
+        round_delay: float = 0.5,
+    ):
         self.env = env
         self.model_manager = model_manager
         self._sessions: dict[str, BSSSession] = {}
         self._running = False
         self._stop_event = threading.Event()
         self._auto_thread: threading.Thread | None = None
+        self._round_delay = round_delay
 
     def _get_session(self, sigil: str) -> BSSSession:
         """Get or create a session for a sigil."""
@@ -136,7 +142,7 @@ class RelayRunner:
 
                     # Brief pause between models
                     if not self._stop_event.is_set():
-                        self._stop_event.wait(timeout=0.5)
+                        self._stop_event.wait(timeout=self._round_delay)
             except Exception as e:
                 if callback:
                     callback({"type": "error", "error": str(e), "round": round_num})

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import glob
 import json
+import logging
 import os
 import time
 import urllib.request
@@ -78,7 +79,10 @@ def list_ollama_models(base_url: str = "http://localhost:11434") -> list[str]:
         with urllib.request.urlopen(req, timeout=5) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             return [m["name"] for m in data.get("models", [])]
-    except Exception:
+    except Exception as exc:
+        logging.getLogger("bss.discovery").warning(
+            "list_ollama_models failed for %s: %s", base_url, exc,
+        )
         return []
 
 
@@ -91,7 +95,10 @@ def check_endpoint(base_url: str, api_key: str | None = None) -> bool:
         with urllib.request.urlopen(req, timeout=5):
             pass
         return True
-    except Exception:
+    except Exception as exc:
+        logging.getLogger("bss.discovery").debug(
+            "check_endpoint unreachable %s: %s", base_url, exc,
+        )
         return False
 
 
@@ -182,7 +189,7 @@ def discover_anthropic() -> list[DiscoveryResult]:
             source="env_var",
             label=f"Anthropic API ({masked})",
             available=True,
-            details={"env_var": "ANTHROPIC_API_KEY", "model": "claude-sonnet-4-20250514"},
+            details={"env_var": "ANTHROPIC_API_KEY", "model": "claude-opus-4-6"},
         )]
     return []
 
@@ -198,7 +205,7 @@ def discover_gemini() -> list[DiscoveryResult]:
             source="env_var",
             label=f"Gemini API ({masked})",
             available=True,
-            details={"env_var": env_var, "model": "gemini-2.0-flash"},
+            details={"env_var": env_var, "model": "gemini-2.5-flash"},
         )]
     return []
 

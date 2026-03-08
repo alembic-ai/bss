@@ -485,7 +485,7 @@ $ bss tree 00030U.!+!=#!=~^=
 - Quickstart: `bss init` walkthrough.
 - "This repo built itself" — explanation of the foundation archive.
 - Link to full spec.
-- License (CC BY 4.0 for spec, MIT or Apache 2.0 for code).
+- License (CC BY 4.0).
 
 5.5 — Final validation:
 

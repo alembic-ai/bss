@@ -1,5 +1,33 @@
 # Changelog
 
+## v1.3.0 — DX & Observability
+
+### New Features
+- **Structured logging** (`src/bss/bss_logger.py`): `get_logger()` + `configure()` with file handler (audit.log) and console handler; `BSS_LOG_PATH` env var override
+- **6 new CLI commands**: `bss health`, `bss archive`, `bss integrity`, `bss export`, `bss clean`, `bss escalation`
+- **`bss log --archive`** flag to include archive blinks in output
+- **`bss status`** archive size warning when >50 blinks
+- **`bss init`** generates `.gitignore` (config.yaml, .bss.lock, .bss_manifest.json, *.pyc)
+
+### Improvements
+- Silent failure fixes: 4 bare `except: pass` blocks replaced with structured logging
+- All 5 providers log errors on `load()` failure
+- Configurable timeouts: `probe_timeout` and `inference_timeout` for OpenAI-compatible provider
+- Configurable `round_delay` for RelayRunner
+- `bss write` wizard bounds-checks all 10 menu selections
+- `bss write` wraps `write_blink()` in try/except for ValueError/FileExistsError
+- `bss relay` / `bss gateway` show friendly error on missing textual dependency
+- Discovery defaults updated: Anthropic → `claude-opus-4-6`, Gemini → `gemini-2.5-flash`
+
+### License
+- Unified license: entire codebase now CC BY 4.0 (was MIT code + CC BY 4.0 spec)
+
+### Tests
+- 561 tests passing (up from 513)
+- New test file: `tests/test_cli_commands.py` (34 tests)
+
+---
+
 ## v1.2.0 — Security Hardening
 
 ### Security

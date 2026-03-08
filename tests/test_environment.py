@@ -619,3 +619,30 @@ class TestPersistentManifest:
         # New instance detects tampering via manifest
         env2 = BSSEnvironment(bss_env.root)
         assert env2.check_immutability(blink.blink_id) is False
+
+
+# ============================================================
+# Logging Tests
+# ============================================================
+
+
+class TestScanLogging:
+    """scan() logs warnings for unparseable blinks."""
+
+    def test_scan_logs_warning_on_bad_file(self, bss_env, caplog):
+        """Binary/corrupt blink file produces a warning log."""
+        bad_file = bss_env.relay_dir / "BADFILE.md"
+        bad_file.write_bytes(b"\x00\x01\x02\xff\xfe")
+        with caplog.at_level("WARNING", logger="bss.environment"):
+            bss_env.scan("relay")
+        assert any("Skipping unparseable" in r.message for r in caplog.records)
+
+    def test_scan_continues_after_bad_file(self, bss_env):
+        """Good blinks are still returned even when bad files exist."""
+        bad_file = bss_env.relay_dir / "CORRUPT.md"
+        bad_file.write_bytes(b"\x00\x01\x02\xff\xfe")
+        blink = _make_blink(1, relational="^")
+        write_blink(blink, bss_env.relay_dir)
+        result = bss_env.scan("relay")
+        assert len(result) == 1
+        assert result[0].blink_id == blink.blink_id

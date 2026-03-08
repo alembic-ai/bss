@@ -25,11 +25,15 @@ class OpenAIProvider(Provider):
         self._base_url: str | None = None
         self._api_key: str | None = None
         self._model: str | None = None
+        self._probe_timeout: int = 5
+        self._inference_timeout: int = 120
 
     def load(self, config: dict) -> bool:
         self._base_url = config.get("base_url", "").rstrip("/")
         self._api_key = config.get("api_key")
         self._model = config.get("model")
+        self._probe_timeout = int(config.get("probe_timeout", 5))
+        self._inference_timeout = int(config.get("inference_timeout", 120))
 
         if not self._base_url or not self._model:
             return False
@@ -47,12 +51,13 @@ class OpenAIProvider(Provider):
             req = urllib.request.Request(f"{self._base_url}/models")
             if self._api_key:
                 req.add_header("Authorization", f"Bearer {self._api_key}")
-            with urllib.request.urlopen(req, timeout=5):
+            with urllib.request.urlopen(req, timeout=self._probe_timeout):
                 pass
             return True
-        except Exception:
+        except Exception as exc:
             # Endpoint might not support /models but still work for chat.
             # Accept the config optimistically.
+            logger.debug("OpenAI /models probe failed (proceeding optimistically): %s", exc)
             return True
 
     def unload(self) -> None:
@@ -84,7 +89,7 @@ class OpenAIProvider(Provider):
         start = time.time()
 
         try:
-            with urllib.request.urlopen(req, timeout=120) as resp:
+            with urllib.request.urlopen(req, timeout=config.get("inference_timeout", self._inference_timeout)) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
 
             elapsed = round(time.time() - start, 2)

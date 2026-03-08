@@ -41,7 +41,11 @@ class HuggingFaceProvider(Provider):
                 token=api_key,
             )
             return True
-        except Exception:
+        except Exception as exc:
+            import logging
+            logging.getLogger("bss.provider.huggingface").error(
+                "Failed to initialize HuggingFace client: %s", exc,
+            )
             self._client = None
             self._model = None
             return False

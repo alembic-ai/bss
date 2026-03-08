@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "blink-sigil-system"
-version = "1.2.0"
+version = "1.3.0"
 description = "Reference implementation of the Blink Sigil System — a file-based coordination protocol for stateless AI models operating in relay."
 readme = "README.md"
-license = "MIT"
+license = "CC-BY-4.0"
 requires-python = ">=3.11"
 authors = [
     {name = "Alembic AI"},
@@ -50,8 +50,12 @@ gemini = [
 huggingface = [
     "huggingface-hub>=0.20.0",
 ]
+dashboard = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.20.0",
+]
 all-providers = [
-    "blink-sigil-system[relay,anthropic,gemini,huggingface]",
+    "blink-sigil-system[relay,dashboard,anthropic,gemini,huggingface]",
 ]
 
 [project.scripts]
@@ -59,7 +63,7 @@ bss = "cli.main:app"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["src*", "cli*", "integrations*", "terminal*"]
+include = ["src*", "cli*", "integrations*", "terminal*", "dashboard*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

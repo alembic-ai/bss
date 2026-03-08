@@ -36,7 +36,11 @@ class AnthropicProvider(Provider):
         try:
             self._client = anthropic.Anthropic(api_key=api_key)
             return True
-        except Exception:
+        except Exception as exc:
+            import logging
+            logging.getLogger("bss.provider.anthropic").error(
+                "Failed to initialize Anthropic client: %s", exc,
+            )
             self._client = None
             self._model = None
             return False

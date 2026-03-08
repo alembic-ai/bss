@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import re
 import sys
@@ -140,8 +141,10 @@ class BSSEnvironment:
                 blinks.append(blink)
                 # Store integrity hash on first read
                 self._record_integrity(blink.blink_id, f)
-            except Exception:
-                pass  # Skip unparseable files
+            except Exception as exc:
+                logging.getLogger("bss.environment").warning(
+                    "Skipping unparseable blink file '%s': %s", f, exc,
+                )
         return blinks
 
     def triage(self, directory: str) -> list[BlinkFile]:

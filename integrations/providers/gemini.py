@@ -40,7 +40,11 @@ class GeminiProvider(Provider):
         try:
             self._client = genai.Client(api_key=api_key)
             return True
-        except Exception:
+        except Exception as exc:
+            import logging
+            logging.getLogger("bss.provider.gemini").error(
+                "Failed to initialize Gemini client: %s", exc,
+            )
             self._client = None
             self._model = None
             return False

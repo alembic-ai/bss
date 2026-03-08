@@ -241,5 +241,9 @@ def has_config(config_path: str | None = None) -> bool:
         with open(path, "r") as f:
             config = yaml.safe_load(f)
         return bool(config and config.get("models"))
-    except Exception:
+    except Exception as exc:
+        import logging
+        logging.getLogger("bss.setup").warning(
+            "has_config: malformed config at %s: %s", path, exc,
+        )
         return False

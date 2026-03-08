@@ -54,7 +54,7 @@ Run tests:
 pytest tests/ -v
 ```
 
-All 513 tests should pass. If any fail on your setup, that's a bug — please report it.
+All 561 tests should pass. If any fail on your setup, that's a bug — please report it.
 
 ## Code Style
 
@@ -108,8 +108,7 @@ Key points:
 
 ## License
 
-- **Code:** MIT
-- **Specification:** CC BY 4.0
+This project is licensed under **CC BY 4.0** (Creative Commons Attribution 4.0 International).
 
 By contributing, you agree to these terms.
 

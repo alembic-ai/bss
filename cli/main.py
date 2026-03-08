@@ -82,6 +82,21 @@ def init(
     console.print(f"  [green]\u2192[/green] Created /profile/")
     console.print(f"  [green]\u2192[/green] Created /archive/")
     console.print(f"  [green]\u2192[/green] Created /artifacts/")
+
+    # Generate .gitignore if it doesn't exist
+    gitignore_path = root / ".gitignore"
+    if not gitignore_path.exists():
+        gitignore_path.write_text(
+            "# BSS — auto-generated\n"
+            "config.yaml\n"
+            ".bss.lock\n"
+            ".bss_manifest.json\n"
+            "*.pyc\n"
+            "__pycache__/\n",
+            encoding="utf-8",
+        )
+        console.print(f"  [green]\u2192[/green] Created .gitignore")
+
     console.print()
 
     if defaults:
@@ -192,7 +207,10 @@ def status(
     console.print(f"  /relay/    {relay_count} blinks")
     console.print(f"  /active/   {active_count} blinks")
     console.print(f"  /profile/  {profile_count} blinks")
-    console.print(f"  /archive/  {archive_count} blinks")
+    if archive_count > ARCHIVE_WARN_THRESHOLD:
+        console.print(f"  /archive/  {archive_count} blinks [yellow](consider reviewing — run bss health)[/yellow]")
+    else:
+        console.print(f"  /archive/  {archive_count} blinks")
     if artifact_count:
         console.print(f"  /artifacts/ {artifact_count} files")
     console.print()
@@ -341,6 +359,7 @@ def triage(
 @app.command()
 def log(
     last: int = typer.Option(10, "--last", "-n", help="Number of recent blinks to show"),
+    include_archive: bool = typer.Option(False, "--archive", "-a", help="Include archive blinks"),
     path: Optional[Path] = typer.Option(None, "--path", "-p"),
 ):
     """Show recent blinks in sequence order."""
@@ -348,7 +367,10 @@ def log(
 
     # Collect all blinks with their directory
     all_blinks: list[tuple[str, BlinkFile]] = []
-    for dirname in ["relay", "active", "profile"]:
+    dirs = ["relay", "active", "profile"]
+    if include_archive:
+        dirs.append("archive")
+    for dirname in dirs:
         for blink in env.scan(dirname):
             all_blinks.append((dirname, blink))
 
@@ -527,6 +549,9 @@ def write_cmd(
     for i, (code, label) in enumerate(action_choices, 1):
         console.print(f"    {i}. {label} ({code})")
     action_idx = typer.prompt("  Select", default=1, type=int) - 1
+    if action_idx < 0 or action_idx >= len(action_choices):
+        console.print(f"  [red]Invalid selection. Choose 1-{len(action_choices)}.[/red]")
+        raise typer.Exit(1)
     action_energy = action_choices[action_idx][0][0]
     action_valence = action_choices[action_idx][0][1]
 
@@ -544,6 +569,9 @@ def write_cmd(
     for i, (code, label) in enumerate(rel_choices, 1):
         console.print(f"    {i}. {label} ({code})")
     rel_idx = typer.prompt("  Select", default=2, type=int) - 1
+    if rel_idx < 0 or rel_idx >= len(rel_choices):
+        console.print(f"  [red]Invalid selection. Choose 1-{len(rel_choices)}.[/red]")
+        raise typer.Exit(1)
     relational = rel_choices[rel_idx][0]
 
     # Parent
@@ -565,6 +593,9 @@ def write_cmd(
     for i, (code, label) in enumerate(conf_choices, 1):
         console.print(f"    {i}. {label} ({code})")
     conf_idx = typer.prompt("  Select", default=1, type=int) - 1
+    if conf_idx < 0 or conf_idx >= len(conf_choices):
+        console.print(f"  [red]Invalid selection. Choose 1-{len(conf_choices)}.[/red]")
+        raise typer.Exit(1)
     confidence = conf_choices[conf_idx][0]
 
     # Cognitive
@@ -577,6 +608,9 @@ def write_cmd(
     for i, (code, label) in enumerate(cog_choices, 1):
         console.print(f"    {i}. {label} ({code})")
     cog_idx = typer.prompt("  Select", default=2, type=int) - 1
+    if cog_idx < 0 or cog_idx >= len(cog_choices):
+        console.print(f"  [red]Invalid selection. Choose 1-{len(cog_choices)}.[/red]")
+        raise typer.Exit(1)
     cognitive = cog_choices[cog_idx][0]
 
     # Domain
@@ -589,6 +623,9 @@ def write_cmd(
     for i, (code, label) in enumerate(dom_choices, 1):
         console.print(f"    {i}. {label} ({code})")
     dom_idx = typer.prompt("  Select", default=1, type=int) - 1
+    if dom_idx < 0 or dom_idx >= len(dom_choices):
+        console.print(f"  [red]Invalid selection. Choose 1-{len(dom_choices)}.[/red]")
+        raise typer.Exit(1)
     domain = dom_choices[dom_idx][0]
 
     # Subdomain
@@ -601,6 +638,9 @@ def write_cmd(
     for i, (code, label) in enumerate(sub_choices, 1):
         console.print(f"    {i}. {label} ({code})")
     sub_idx = typer.prompt("  Select", default=1, type=int) - 1
+    if sub_idx < 0 or sub_idx >= len(sub_choices):
+        console.print(f"  [red]Invalid selection. Choose 1-{len(sub_choices)}.[/red]")
+        raise typer.Exit(1)
     subdomain = sub_choices[sub_idx][0]
 
     # Scope
@@ -609,6 +649,9 @@ def write_cmd(
     for i, (code, label) in enumerate(scope_choices, 1):
         console.print(f"    {i}. {label} ({code})")
     scope_idx = typer.prompt("  Select", default=2, type=int) - 1
+    if scope_idx < 0 or scope_idx >= len(scope_choices):
+        console.print(f"  [red]Invalid selection. Choose 1-{len(scope_choices)}.[/red]")
+        raise typer.Exit(1)
     scope = scope_choices[scope_idx][0]
 
     # Maturity
@@ -618,6 +661,9 @@ def write_cmd(
     for i, (code, label) in enumerate(mat_choices, 1):
         console.print(f"    {i}. {label} ({code})")
     mat_idx = typer.prompt("  Select", default=2, type=int) - 1
+    if mat_idx < 0 or mat_idx >= len(mat_choices):
+        console.print(f"  [red]Invalid selection. Choose 1-{len(mat_choices)}.[/red]")
+        raise typer.Exit(1)
     maturity = mat_choices[mat_idx][0]
 
     # Priority
@@ -627,6 +673,9 @@ def write_cmd(
     for i, (code, label) in enumerate(pri_choices, 1):
         console.print(f"    {i}. {label} ({code})")
     pri_idx = typer.prompt("  Select", default=3, type=int) - 1
+    if pri_idx < 0 or pri_idx >= len(pri_choices):
+        console.print(f"  [red]Invalid selection. Choose 1-{len(pri_choices)}.[/red]")
+        raise typer.Exit(1)
     priority = pri_choices[pri_idx][0]
 
     # Sensitivity
@@ -635,6 +684,9 @@ def write_cmd(
     for i, (code, label) in enumerate(sens_choices, 1):
         console.print(f"    {i}. {label} ({code})")
     sens_idx = typer.prompt("  Select", default=3, type=int) - 1
+    if sens_idx < 0 or sens_idx >= len(sens_choices):
+        console.print(f"  [red]Invalid selection. Choose 1-{len(sens_choices)}.[/red]")
+        raise typer.Exit(1)
     sensitivity = sens_choices[sens_idx][0]
 
     # Generate the ID
@@ -716,7 +768,14 @@ def write_cmd(
 
     confirm = typer.confirm(f"\n  Write this blink to /{dir_name}/?", default=True)
     if confirm:
-        write_blink(blink, directory)
+        try:
+            write_blink(blink, directory)
+        except FileExistsError:
+            console.print(f"  [red]Error: blink already exists at /{dir_name}/{blink_id}.md[/red]")
+            raise typer.Exit(1)
+        except ValueError as exc:
+            console.print(f"  [red]Error: {exc}[/red]")
+            raise typer.Exit(1)
         console.print(f"  [green]\u2192[/green] Written to /{dir_name}/{blink_id}.md")
     else:
         console.print("  Cancelled.")
@@ -1124,6 +1183,244 @@ def roster_config(
 
 
 # ============================================================
+# bss health
+# ============================================================
+
+ARCHIVE_WARN_THRESHOLD = 50
+
+
+@app.command()
+def health(
+    path: Optional[Path] = typer.Option(None, "--path", "-p"),
+):
+    """Check environment health: dirs, relay backlog, error chains."""
+    env = _get_env(path)
+    from src.bss.environment import RELAY_WARN_THRESHOLD
+    issues: list[str] = []
+
+    # 1. Directory check
+    console.print("\n  [bold]Directories[/bold]")
+    for dirname in ["relay", "active", "profile", "archive"]:
+        d = env.root / dirname
+        ok = d.is_dir()
+        label = "[green]OK[/green]" if ok else "[red]MISSING[/red]"
+        console.print(f"    /{dirname}/  {label}")
+        if not ok:
+            issues.append(f"Missing required directory: /{dirname}/")
+
+    # 2. Relay backlog
+    rc = env.relay_count()
+    console.print(f"\n  [bold]Relay backlog[/bold]: {rc} blinks", end="")
+    if rc > RELAY_WARN_THRESHOLD:
+        console.print(f" [yellow](above threshold {RELAY_WARN_THRESHOLD})[/yellow]")
+        issues.append(f"Relay backlog: {rc} blinks")
+    else:
+        console.print(" [green]OK[/green]")
+
+    # 3. Error chains
+    chains = check_escalation(env)
+    console.print(f"  [bold]Error chains[/bold]: {len(chains)}", end="")
+    if chains:
+        console.print(" [red]needs attention[/red]")
+        issues.append(f"{len(chains)} unresolved error chain(s)")
+    else:
+        console.print(" [green]OK[/green]")
+
+    # 4. Archive size
+    archive_count = len(list(env.archive_dir.rglob("*.md"))) if env.archive_dir.exists() else 0
+    if archive_count > ARCHIVE_WARN_THRESHOLD:
+        console.print(f"  [bold]Archive[/bold]: {archive_count} blinks [yellow](consider reviewing)[/yellow]")
+        issues.append(f"Archive has {archive_count} blinks")
+    else:
+        console.print(f"  [bold]Archive[/bold]: {archive_count} blinks [green]OK[/green]")
+
+    # Summary
+    if issues:
+        console.print(f"\n  [red]Health check: {len(issues)} issue(s)[/red]")
+        for issue in issues:
+            console.print(f"    [red]-[/red] {issue}")
+        console.print()
+        raise typer.Exit(1)
+    else:
+        console.print("\n  [green]All checks passed.[/green]\n")
+
+
+# ============================================================
+# bss archive
+# ============================================================
+
+
+@app.command(name="archive")
+def archive_cmd(
+    blink_id: str = typer.Argument(..., help="Blink ID to archive"),
+    path: Optional[Path] = typer.Option(None, "--path", "-p"),
+):
+    """Move a blink from relay/active to archive/."""
+    env = _get_env(path)
+    try:
+        new_path = env.move_blink(blink_id, "archive")
+        console.print(f"\n  [green]\u2192[/green] Archived: {blink_id}")
+        console.print(f"    {new_path.relative_to(env.root)}\n")
+    except FileNotFoundError:
+        console.print(f"[red]Blink not found: {blink_id}[/red]")
+        raise typer.Exit(1)
+    except ValueError as exc:
+        console.print(f"[red]Archive failed: {exc}[/red]")
+        raise typer.Exit(1)
+
+
+# ============================================================
+# bss integrity
+# ============================================================
+
+
+@app.command()
+def integrity(
+    path: Optional[Path] = typer.Option(None, "--path", "-p"),
+):
+    """Run immutability check across all manifest-tracked blinks."""
+    env = _get_env(path)
+    manifest = env._load_manifest()
+
+    if not manifest:
+        console.print("\n  No manifest entries. Scanning to establish baseline...")
+        for dirname in ["relay", "active", "profile"]:
+            env.scan(dirname)
+        manifest = env._load_manifest()
+
+    if not manifest:
+        console.print("  No blinks found.\n")
+        return
+
+    passed = failed = missing = 0
+    for blink_id in sorted(manifest):
+        try:
+            ok = env.check_immutability(blink_id)
+            if ok:
+                passed += 1
+            else:
+                failed += 1
+                console.print(f"  [red]TAMPERED[/red]  {blink_id}")
+        except FileNotFoundError:
+            missing += 1
+            console.print(f"  [yellow]MISSING[/yellow]   {blink_id}")
+
+    console.print(f"\n  {passed} OK  |  {failed} tampered  |  {missing} missing\n")
+    if failed:
+        raise typer.Exit(1)
+
+
+# ============================================================
+# bss export
+# ============================================================
+
+
+@app.command(name="export")
+def export_cmd(
+    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output JSON file (default: stdout)"),
+    include_archive: bool = typer.Option(False, "--archive", "-a", help="Include archive blinks"),
+    path: Optional[Path] = typer.Option(None, "--path", "-p"),
+):
+    """Export all blinks to JSON."""
+    import json as _json
+    env = _get_env(path)
+
+    dirs = ["relay", "active", "profile"]
+    if include_archive:
+        dirs.append("archive")
+
+    records = []
+    for dirname in dirs:
+        for blink in env.scan(dirname):
+            records.append({
+                "blink_id": blink.blink_id,
+                "directory": dirname,
+                "born_from": blink.born_from,
+                "summary": blink.summary,
+                "lineage": blink.lineage,
+                "links": blink.links,
+            })
+
+    payload = _json.dumps(records, indent=2, ensure_ascii=False)
+
+    if output:
+        output.write_text(payload, encoding="utf-8")
+        console.print(f"\n  [green]\u2192[/green] Exported {len(records)} blinks to {output}\n")
+    else:
+        console.print(payload)
+
+
+# ============================================================
+# bss clean
+# ============================================================
+
+
+@app.command()
+def clean(
+    path: Optional[Path] = typer.Option(None, "--path", "-p"),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation"),
+):
+    """Remove .bss.lock and stale temp files."""
+    env = _get_env(path)
+    targets: list[Path] = []
+
+    lock = env.root / ".bss.lock"
+    if lock.exists():
+        targets.append(lock)
+
+    targets.extend(env.root.glob("*.tmp"))
+
+    if not targets:
+        console.print("\n  Nothing to clean.\n")
+        return
+
+    console.print(f"\n  Will remove {len(targets)} file(s):")
+    for t in targets:
+        console.print(f"    {t.name}")
+
+    if not yes:
+        if not typer.confirm("\n  Proceed?", default=False):
+            console.print("  Cancelled.")
+            return
+
+    removed = 0
+    for t in targets:
+        try:
+            t.unlink()
+            removed += 1
+        except OSError as exc:
+            console.print(f"  [yellow]Could not remove {t.name}: {exc}[/yellow]")
+
+    console.print(f"\n  [green]\u2192[/green] Removed {removed} file(s).\n")
+
+
+# ============================================================
+# bss escalation
+# ============================================================
+
+
+@app.command()
+def escalation(
+    path: Optional[Path] = typer.Option(None, "--path", "-p"),
+):
+    """Show error escalation chains in detail."""
+    env = _get_env(path)
+    chains = check_escalation(env)
+
+    if not chains:
+        console.print("\n  No error chains found.\n")
+        return
+
+    console.print(f"\n  [red]{len(chains)} error chain(s) found:[/red]\n")
+    for i, chain in enumerate(chains, 1):
+        console.print(f"  [bold]Chain {i}:[/bold]")
+        for blink in chain:
+            summary = blink.summary[:60] + "..." if len(blink.summary) > 60 else blink.summary
+            console.print(f"    [red]\u2192[/red] {blink.blink_id}  \"{summary}\"")
+        console.print()
+
+
+# ============================================================
 # bss relay
 # ============================================================
 
@@ -1134,8 +1431,59 @@ def relay(
     setup: bool = typer.Option(False, "--setup", help="Run model setup wizard (opens in TUI)"),
 ):
     """Launch the BSS relay terminal interface."""
-    from terminal.app import BSSRelayApp
+    try:
+        from terminal.app import BSSRelayApp
+    except ImportError:
+        console.print(
+            "[red]Error:[/red] The relay terminal requires 'textual'.\n"
+            "Install it with: [bold]pip install bss[relay][/bold]"
+        )
+        raise typer.Exit(1)
     BSSRelayApp(path or Path.cwd(), force_setup=setup).run()
+
+
+# ============================================================
+# bss gateway (V2)
+# ============================================================
+
+
+@app.command()
+def gateway(
+    path: Optional[Path] = typer.Argument(None, help="BSS environment path (default: current)"),
+    skip_onboarding: bool = typer.Option(False, "--skip-onboarding", help="Skip setup wizard and go straight to dashboard"),
+    port: int = typer.Option(8741, "--port", help="Dashboard web server port"),
+):
+    """Launch the BSS V2 Gateway with full setup wizard and web dashboard."""
+    env_path = path or Path.cwd()
+    marker = env_path / ".bss_v2_setup_complete"
+
+    if not marker.exists() and not skip_onboarding:
+        # Run terminal onboarding first
+        try:
+            from terminal.gateway import BSSGatewayApp
+        except ImportError:
+            console.print(
+                "[red]Error:[/red] The gateway requires 'textual'.\n"
+                "Install it with: [bold]pip install bss[relay][/bold]"
+            )
+            raise typer.Exit(1)
+
+        result = BSSGatewayApp(env_path, skip_onboarding=False).run()
+
+        if result != "launch_dashboard":
+            return
+
+    # Launch web dashboard
+    try:
+        from dashboard.server import launch_dashboard
+    except ImportError:
+        console.print(
+            "[red]Error:[/red] The dashboard requires 'fastapi' and 'uvicorn'.\n"
+            "Install them with: [bold]pip install fastapi uvicorn[/bold]"
+        )
+        raise typer.Exit(1)
+
+    launch_dashboard(env_path, port=port)
 
 
 if __name__ == "__main__":
