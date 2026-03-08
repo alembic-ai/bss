@@ -202,6 +202,79 @@ bss roster-remove B
 bss roster-config A --output CLAUDE.md
 ```
 
+## Dashboard & Setup Gateway
+
+The BSS v2 platform combines a **terminal-based setup gateway** with a **web-based monitoring dashboard**. All configuration and initialization happens in the terminal; monitoring, analytics, and visualization happen in the browser.
+
+### Terminal Gateway Setup
+
+The terminal gateway walks you through complete BSS initialization in an interactive TUI:
+
+```bash
+# Launch the setup gateway
+python -m terminal.gateway
+```
+
+This opens an interactive wizard that guides you through:
+
+1. **Environment Initialization** — Create or connect to a BSS environment
+2. **Backend Configuration** — Select and configure your AI model provider (GGUF, Ollama, OpenAI, Anthropic, Gemini, or Hugging Face)
+3. **Blink Grammar** — Learn or review the 17-character identifier encoding scheme
+4. **Protocol Primer** — Understand relay coordination and session lifecycle
+5. **Roster Setup** — Add AI models and assign roles/permissions
+6. **System Health Check** — Validate all components are working
+7. **Summary & Next Steps** — Review configuration and get ready to run
+
+**Key Features:**
+- Auto-detects available backends (scans for GGUF files, probes local Ollama, checks environment variables for API keys)
+- Interactive validation — each step confirms success before moving to the next
+- Option to re-run setup at any time: type `/setup` in the relay terminal
+- Encrypted credential storage for API keys and sensitive config
+
+### Web Dashboard
+
+Once setup is complete, launch the monitoring dashboard:
+
+```bash
+python -m dashboard.server
+```
+
+The dashboard opens at `http://localhost:8080` and provides real-time visibility:
+
+- **Overview** — BSS environment status, active blinks, recent activity
+- **Timeline** — Visual timeline of blink creation and relay handoffs
+- **Conversational Feed** — Chat interface showing AI session logs and reasoning chains
+- **Chat Interface** — Direct chat with models configured in your roster
+- **Analytics** — Metrics on blink completion, relay performance, model utilization
+- **Artifacts** — Browse and manage linked files across your blinks
+- **Health Monitoring** — System status, backend connectivity, error logs
+- **Search & Glossary** — Full-text search across blink content and metadata
+- **Task Board** — Organize blinks by status and priority
+- **Relay Status** — Real-time view of relay queue and handoff history
+- **Settings** — Manage dashboard configuration and export data
+
+**Key Features:**
+- Real-time updates as blinks are created and relay handoffs occur
+- Full lineage visualization for any blink thread
+- Export capabilities for analytics and reporting
+- Role-based access (if using multi-model teams)
+
+### Typical Workflow
+
+1. **First Time:** Run the gateway setup (`python -m terminal.gateway`) to configure your environment and models
+2. **Start Work:** Use the relay terminal (`bss relay`) for interactive sessions with your configured models
+3. **Monitor:** Open the web dashboard (`python -m dashboard.server`) to track progress, review outputs, and manage tasks
+4. **Between Sessions:** The dashboard persists all blinks and history; your next session can pick up where you left off
+
+### Configuration Files
+
+After setup, your configuration is stored in:
+- `integrations/config.yaml` — Backend credentials and model settings
+- `.bss_v2_setup_complete` — Marker indicating initial setup is done
+- `.bss_manifest.json` — Environment metadata and component versions
+
+Never commit `integrations/config.yaml` to version control (it's in `.gitignore`). Credentials should always be managed via environment variables when possible.
+
 ## Use Cases
 
 ### Solo Developer with Multiple AI Assistants
