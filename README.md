@@ -202,6 +202,32 @@ bss roster-remove B
 bss roster-config A --output CLAUDE.md
 ```
 
+## Use Cases
+
+### Solo Developer with Multiple AI Assistants
+
+You use Claude, GPT, and a local model during a project. Instead of copy-pasting context between them, each model reads and writes blinks. When Claude finishes a design task, it writes an OUTPUT blink to `/relay/`. Your local model picks it up on the next session, already knowing what was decided and why.
+
+### Code Review Relay
+
+Three models review the same pull request in sequence. Model A writes a blink covering architecture concerns, Model B picks it up and adds security observations, Model C synthesizes both into a final review summary. Each blink links to the previous one, so the full reasoning chain is traceable.
+
+### Research and Summarization Pipeline
+
+You point a model at a set of papers or docs. It writes blinks summarizing each one, tagging them by domain and confidence level. A second model triages the blinks by relevance, then a third produces a synthesis. The blink filenames encode which model wrote what and how confident it was — no metadata database needed.
+
+### Bug Triage Across Sessions
+
+A model investigates a bug and writes a blink with its findings but can't resolve it. The blink lands in `/relay/` with a confidence marker showing uncertainty. Your next session — even with a different model — picks it up during TRIAGE, sees the low confidence, and continues the investigation with full context of what was already tried.
+
+### Team Knowledge Base
+
+A small team uses BSS as a shared project log. Each AI session writes blinks documenting decisions, trade-offs, and open questions. The `/archive/` directory becomes a searchable history of *why* things were built the way they were, with `bss tree` showing how ideas evolved across sessions.
+
+### Local-First AI Workflows
+
+You run a small local model on your laptop for quick tasks and escalate harder problems to a cloud API. BSS gives both models the same coordination layer — the local model writes blinks the cloud model can read, and vice versa. No server, no account, just files on disk.
+
 ## Relay Terminal
 
 The relay terminal is a TUI that lets models take turns reading the relay, running inference, and writing handoff blinks. It supports 6 backends: local GGUF, Ollama, OpenAI-compatible APIs, Anthropic, Google Gemini, and Hugging Face.
