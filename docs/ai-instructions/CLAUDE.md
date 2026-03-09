@@ -5,7 +5,7 @@ Read bss_spec/BSS_SPEC_v1.md for the full protocol specification.
 
 ## Key Rules
 - Blink identifiers are EXACTLY 17 characters. See Module 3.
-- 5 directories: /relay/, /active/, /profile/, /archive/, /artifacts/
+- 4 required directories: /relay/, /active/, /profile/, /archive/ (+ optional /artifacts/)
 - Blinks are immutable. Never modify, rename, or delete.
 - Test with pytest. All Module 8 tests must pass per compliance level.
 - Python 3.11+. Minimal external dependencies for core protocol.

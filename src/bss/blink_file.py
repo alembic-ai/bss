@@ -54,15 +54,19 @@ class BlinkFile:
 
 
 def _count_sentences(text: str) -> int:
-    """Count sentences in text using a simple heuristic.
+    """Count sentences in text using a heuristic.
 
-    Splits on sentence-ending punctuation followed by whitespace or end of string.
+    Splits on sentence-ending punctuation followed by whitespace or end of string,
+    excluding common abbreviations and version numbers.
     """
     text = text.strip()
     if not text:
         return 0
-    # Split on . ! ? followed by space or end, excluding common abbreviations
-    sentences = re.split(r'(?<=[.!?])\s+', text)
+    # Replace common abbreviations to avoid false splits
+    _abbrevs = r'(?:Dr|Mr|Mrs|Ms|Prof|Sr|Jr|vs|etc|e\.g|i\.e|v\d)'
+    # Split on . ! ? followed by whitespace, but not after abbreviations
+    cleaned = re.sub(_abbrevs + r'\.', lambda m: m.group().replace('.', '\x00'), text)
+    sentences = re.split(r'(?<=[.!?])\s+', cleaned)
     # Filter out empty strings
     sentences = [s for s in sentences if s.strip()]
     return len(sentences)
@@ -311,6 +315,10 @@ def validate_file(
         if meta.relational == "^" and blink.born_from != ["Origin"]:
             violations.append(
                 "Origin blink (relational '^') must have Born from: Origin"
+            )
+        if blink.born_from == ["Origin"] and meta.relational != "^":
+            violations.append(
+                "Origin blink (Born from: Origin) must have relational '^'"
             )
         # Note: convergence blinks SHOULD have multiple parents per Section 3.3,
         # but forced convergence from generation cap (Section 5.7) MAY have

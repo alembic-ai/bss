@@ -288,7 +288,7 @@ def generate_model_config(
         "",
         "## Relay State",
         f"- Blinks in /relay/: {relay_count}",
-        f"- Next sequence: {env.next_sequence()}",
+        f"- Next sequence: {env.peek_next_sequence()}",
         "",
         "## Rules",
         "- Read /relay/ at session start. Write a handoff blink at session end.",

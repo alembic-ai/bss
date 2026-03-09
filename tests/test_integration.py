@@ -248,7 +248,7 @@ class TestMultiModelRelay:
         roster = read_roster(env)
 
         # B writes a global scope blink (should violate ceiling)
-        global_id = _make_id(env, author="B", scope="!")
+        global_id = _make_id(env, author="B", relational="^", scope="!")
         global_blink = BlinkFile(
             blink_id=global_id,
             born_from=["Origin"],
@@ -260,7 +260,7 @@ class TestMultiModelRelay:
         assert check_scope_compliance(roster, "B", global_blink) is False
 
         # B writes a local scope blink (within ceiling)
-        local_id = _make_id(env, author="B", scope="-")
+        local_id = _make_id(env, author="B", relational="^", scope="-")
         local_blink = BlinkFile(
             blink_id=local_id,
             born_from=["Origin"],
@@ -736,7 +736,7 @@ class TestRosterManagementEndToEnd:
         assert "<-- you" in config
 
         # 5. Scope compliance: B at regional can write regional but not global
-        regional_id = _make_id(env, author="B", scope="=")
+        regional_id = _make_id(env, author="B", relational="^", scope="=")
         regional_blink = BlinkFile(
             blink_id=regional_id,
             born_from=["Origin"],
@@ -746,7 +746,7 @@ class TestRosterManagementEndToEnd:
         )
         assert check_scope_compliance(roster, "B", regional_blink) is True
 
-        global_id = _make_id(env, author="B", scope="!")
+        global_id = _make_id(env, author="B", relational="^", scope="!")
         global_blink = BlinkFile(
             blink_id=global_id,
             born_from=["Origin"],

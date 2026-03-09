@@ -249,7 +249,7 @@ def check_escalation(env: BSSEnvironment) -> list[list[BlinkFile]]:
     """
     # Scan all directories for error blinks
     all_blinks: dict[str, BlinkFile] = {}
-    for dirname in ["relay", "active"]:
+    for dirname in ["relay", "active", "profile", "archive"]:
         for blink in env.scan(dirname):
             all_blinks[blink.blink_id] = blink
 

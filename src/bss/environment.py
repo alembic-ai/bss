@@ -191,6 +191,20 @@ class BSSEnvironment:
 
         return highest
 
+    def peek_next_sequence(self) -> str:
+        """Preview the next sequence number without consuming it.
+
+        Unlike next_sequence(), this does not acquire a lock or increment
+        any counter. Safe for read-only operations like config generation.
+
+        Returns:
+            The next 5-char base-36 sequence (read-only).
+        """
+        current = self.highest_sequence()
+        if current == "00000":
+            return "00001"
+        return next_sequence(current)
+
     def _lock_path(self) -> Path:
         """Path to the environment lock file."""
         return self.root / ".bss.lock"
@@ -465,10 +479,10 @@ class BSSEnvironment:
             ValueError: If the slug contains unsafe characters.
         """
         # Sanitize slug to prevent path traversal
-        if not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9_-]*$', slug):
+        if not re.match(r'^[a-z0-9][a-z0-9-]*$', slug):
             raise ValueError(
                 f"Invalid artifact slug '{slug}'. "
-                "Use only letters, digits, hyphens, and underscores."
+                "Use only lowercase letters, digits, and hyphens."
             )
 
         sequence = blink_id[:5]

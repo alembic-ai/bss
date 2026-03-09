@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -189,10 +190,10 @@ def status(
     """Show current environment state."""
     env = _get_env(path)
 
-    relay_count = len(list(env.relay_dir.glob("*.md")))
-    active_count = len(list(env.active_dir.glob("*.md")))
-    profile_count = len(list(env.profile_dir.glob("*.md")))
-    archive_count = len(list(env.archive_dir.rglob("*.md")))
+    relay_count = len(env._list_blink_files(env.relay_dir))
+    active_count = len(env._list_blink_files(env.active_dir))
+    profile_count = len(env._list_blink_files(env.profile_dir))
+    archive_count = len(env._list_blink_files_recursive(env.archive_dir))
     total = relay_count + active_count + profile_count + archive_count
 
     artifact_count = 0
@@ -201,7 +202,7 @@ def status(
 
     console.print()
     console.print(f"  [bold]BSS Environment:[/bold] {env.root}")
-    console.print(f"  Spec version: 1.0")
+    console.print(f"  Spec version: 1.0  |  Implementation: 2.0.1")
     console.print(f"  Total blinks: {total}")
     console.print()
     console.print(f"  /relay/    {relay_count} blinks")
@@ -915,7 +916,6 @@ def _derive_slug(filename: str) -> str:
     # Lowercase
     slug = slug.lower()
     # Collapse multiple hyphens
-    import re
     slug = re.sub(r"-+", "-", slug)
     # Strip leading/trailing hyphens
     slug = slug.strip("-")

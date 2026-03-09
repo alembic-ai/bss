@@ -238,5 +238,5 @@ class TestArtifactSlugSanitization:
         source = tmp_path / "good.py"
         source.write_text("# good")
 
-        result = env.register_artifact(blink.blink_id, source, "my-valid-slug_v2")
+        result = env.register_artifact(blink.blink_id, source, "my-valid-slug-v2")
         assert result.exists()

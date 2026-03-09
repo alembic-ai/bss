@@ -57,7 +57,7 @@ def _write_test_blink(env, seq, action_e=".", action_v=".", directory="active"):
     bid = generate(
         sequence=seq, author="A",
         action_energy=action_e, action_valence=action_v,
-        relational="+",
+        relational="^",
         confidence="!", cognitive="=",
         domain="#", subdomain="!",
         scope="-", maturity="~",

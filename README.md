@@ -169,7 +169,7 @@ bss write
 bss log
 
 # View lineage tree for a blink
-bss tree 00009A~~}!.^;!!=.
+bss tree <blink-id>
 
 # Triage relay blinks by urgency
 bss triage
@@ -271,7 +271,7 @@ The dashboard opens at `http://localhost:8080` and provides real-time visibility
 After setup, your configuration is stored in:
 - `integrations/config.yaml` — Backend credentials and model settings
 - `.bss_v2_setup_complete` — Marker indicating initial setup is done
-- `.bss_manifest.json` — Environment metadata and component versions
+- `.bss_manifest.json` — SHA-256 integrity hashes for blink immutability checking
 
 Never commit `integrations/config.yaml` to version control (it's in `.gitignore`). Credentials should always be managed via environment variables when possible.
 
@@ -356,12 +356,7 @@ project/
 
 The `/archive/foundation/` and `/active/` directories contain the blinks written *during* the construction of this very implementation. Each level of the build — identifier engine, file engine, relay protocol, CLI — produced blinks that tracked decisions, breakthroughs, and bugs as they happened.
 
-Start exploring:
-- `bss read 00007A~~}!.^;!!=.` — How the identifier engine was built
-- `bss read 00008A~~}!.^;!!=.` — How the relay protocol was implemented
-- `bss read 00009A~~}!.^;!!=.` — How the CLI was designed
-
-Trace the full lineage: `bss tree 00009A~~}!.^;!!=.`
+Explore the archive to see how decisions were tracked during the build process.
 
 ## Directory Structure
 
