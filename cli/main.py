@@ -1452,6 +1452,7 @@ def gateway(
     path: Optional[Path] = typer.Argument(None, help="BSS environment path (default: current)"),
     skip_onboarding: bool = typer.Option(False, "--skip-onboarding", help="Skip setup wizard and go straight to dashboard"),
     port: int = typer.Option(8741, "--port", help="Dashboard web server port"),
+    host: str = typer.Option("127.0.0.1", "--host", help="Bind address (default: 127.0.0.1 for security, use 0.0.0.0 for network access)"),
 ):
     """Launch the BSS V2 Gateway with full setup wizard and web dashboard."""
     env_path = path or Path.cwd()
@@ -1483,7 +1484,7 @@ def gateway(
         )
         raise typer.Exit(1)
 
-    launch_dashboard(env_path, port=port)
+    launch_dashboard(env_path, port=port, host=host)
 
 
 if __name__ == "__main__":

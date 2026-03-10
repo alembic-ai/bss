@@ -221,7 +221,10 @@
 
         if (model) cfg.model = model.value.trim();
         if (baseUrl) cfg.base_url = baseUrl.value.trim();
-        if (apiKey && apiKey.value.trim()) cfg.api_key = apiKey.value.trim();
+        if (apiKey && apiKey.value.trim()) {
+            // Send the key as-is — server will preserve existing key if it starts with ****
+            cfg.api_key = apiKey.value.trim();
+        }
         if (path) cfg.path = path.value.trim();
         if (ctx) cfg.n_ctx = parseInt(ctx.value) || 2048;
 
@@ -244,22 +247,14 @@
         result.textContent = 'Testing...';
         result.style.color = 'var(--text-dim)';
 
-        const data = await fetch('/api/settings/test', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({backend, base_url: baseUrl, api_key: apiKey}),
-        }).then(r => r.json()).catch(() => ({ok: false, message: 'Request failed'}));
+        const data = await BSS.apiPost('/api/settings/test', {backend, base_url: baseUrl, api_key: apiKey});
 
         result.textContent = data.message || (data.ok ? 'OK' : 'Failed');
         result.style.color = data.ok ? 'var(--success)' : 'var(--error)';
     };
 
     async function saveConfig() {
-        await fetch('/api/settings/config', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({models: currentConfig}),
-        });
+        await BSS.apiPost('/api/settings/config', {models: currentConfig});
     }
 
     // ── Backend Discovery ──
@@ -302,7 +297,7 @@
     BSS._settingsLaunchGateway = async function() {
         const status = document.getElementById('settings-gateway-status');
         status.textContent = 'Launching...';
-        const data = await fetch('/api/settings/gateway/launch', {method: 'POST'}).then(r => r.json()).catch(() => ({ok: false}));
+        const data = await BSS.apiPost('/api/settings/gateway/launch', {});
         status.textContent = data.ok ? 'Gateway launched in terminal' : 'Failed to launch';
         status.style.color = data.ok ? 'var(--success)' : 'var(--error)';
     };

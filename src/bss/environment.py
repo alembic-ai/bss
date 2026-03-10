@@ -315,6 +315,9 @@ class BSSEnvironment:
 
         return None
 
+    # Directories allowed as move targets
+    ALLOWED_MOVE_DIRS = frozenset(REQUIRED_DIRS + OPTIONAL_DIRS)
+
     def move_blink(self, blink_id: str, to_directory: str) -> Path:
         """Move a blink between directories.
 
@@ -322,15 +325,26 @@ class BSSEnvironment:
 
         Args:
             blink_id: The blink identifier to move.
-            to_directory: Target directory name.
+            to_directory: Target directory name (must be a known BSS directory).
 
         Returns:
             New path of the moved blink.
 
         Raises:
             FileNotFoundError: If the blink doesn't exist.
-            ValueError: If immutability check fails.
+            ValueError: If to_directory is invalid or immutability check fails.
         """
+        # Validate: must be a known BSS directory or subdirectory thereof
+        base_dir = to_directory.split("/")[0]
+        if base_dir not in self.ALLOWED_MOVE_DIRS:
+            raise ValueError(
+                f"Invalid target directory '{to_directory}'. "
+                f"Must be within: {', '.join(sorted(self.ALLOWED_MOVE_DIRS))}"
+            )
+        # Reject path traversal attempts
+        if ".." in to_directory:
+            raise ValueError("Directory path must not contain '..'")
+
         source = self.find_blink(blink_id)
         if source is None:
             raise FileNotFoundError(f"Blink '{blink_id}' not found")
@@ -341,6 +355,10 @@ class BSSEnvironment:
         dest_dir = self.root / to_directory
         dest_dir.mkdir(parents=True, exist_ok=True)
         dest = dest_dir / source.name
+
+        # Verify destination stays within root
+        if not self._is_within_root(dest):
+            raise ValueError("Target path escapes BSS root")
 
         # Move the file
         source.rename(dest)

@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import os
+import secrets
+import sys
 import time
 import threading
 import webbrowser
 import asyncio
-import queue
 from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -79,20 +80,101 @@ class SettingsTestRequest(BaseModel):
     api_key: str = ""
 
 
-def create_app(env_path: Path) -> FastAPI:
-    """Create the FastAPI application bound to a BSS environment."""
+def _mask_api_key(key: str) -> str:
+    """Mask an API key for display, showing only last 4 characters."""
+    if not key:
+        return ""
+    if len(key) > 4:
+        return "****" + key[-4:]
+    return "****"
+
+
+def _mask_config_keys(models: dict) -> dict:
+    """Return a copy of the models config dict with API keys masked."""
+    masked = {}
+    for sigil, cfg in models.items():
+        entry = dict(cfg)
+        if "api_key" in entry and entry["api_key"]:
+            entry["api_key"] = _mask_api_key(entry["api_key"])
+        masked[sigil] = entry
+    return masked
+
+
+def create_app(env_path: Path, auth_token: str | None = None, port: int = 8741) -> FastAPI:
+    """Create the FastAPI application bound to a BSS environment.
+
+    Args:
+        env_path: Path to the BSS environment root.
+        auth_token: Bearer token for API authentication. If None, auth is disabled.
+        port: Port number (used for CORS origin).
+    """
     app = FastAPI(
         title="BSS Dashboard",
         description="Blink Sigil System — Visual Dashboard",
         version="2.0.0",
     )
 
+    # Store auth token on app state
+    app.state.auth_token = auth_token
+
+    # Restrict CORS to localhost only
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=[
+            f"http://localhost:{port}",
+            f"http://127.0.0.1:{port}",
+        ],
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # --- Authentication middleware ---
+    @app.middleware("http")
+    async def auth_middleware(request: Request, call_next):
+        """Require Bearer token for /api/ endpoints when auth is enabled."""
+        path = request.url.path
+
+        # Allow unauthenticated access to static files, index, and docs
+        if (
+            app.state.auth_token is None
+            or not path.startswith("/api/")
+            or path == "/api/health"
+        ):
+            response = await call_next(request)
+            return response
+
+        # Check Authorization header
+        auth_header = request.headers.get("Authorization", "")
+        # Also accept token as query parameter (needed for EventSource/SSE)
+        query_token = request.query_params.get("token", "")
+
+        expected = f"Bearer {app.state.auth_token}"
+        if auth_header == expected or query_token == app.state.auth_token:
+            response = await call_next(request)
+            return response
+
+        return JSONResponse(
+            status_code=401,
+            content={"detail": "Unauthorized — provide a valid Bearer token"},
+        )
+
+    # --- Security headers middleware ---
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        if request.url.path == "/" or request.url.path.startswith("/static/"):
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; "
+                "script-src 'self' 'unsafe-inline' https://unpkg.com; "
+                "style-src 'self' 'unsafe-inline'; "
+                "img-src 'self' data:; "
+                "connect-src 'self'; "
+                "frame-ancestors 'none'"
+            )
+        return response
 
     # Serve static files
     static_dir = DASHBOARD_DIR / "static"
@@ -141,7 +223,14 @@ def create_app(env_path: Path) -> FastAPI:
     @app.get("/", response_class=HTMLResponse)
     async def index():
         html_path = DASHBOARD_DIR / "templates" / "index.html"
-        return HTMLResponse(html_path.read_text(encoding="utf-8"))
+        html = html_path.read_text(encoding="utf-8")
+        # Inject auth token into page so frontend JS can use it
+        token_script = ""
+        if app.state.auth_token:
+            # Token is a safe alphanumeric string from secrets.token_urlsafe
+            token_script = f'<script>window.__BSS_TOKEN__="{app.state.auth_token}";</script>'
+        html = html.replace("</head>", f"{token_script}</head>", 1)
+        return HTMLResponse(html)
 
     # ──────────────────────── ENVIRONMENT ─────────────────────────
 
@@ -158,7 +247,7 @@ def create_app(env_path: Path) -> FastAPI:
             "root": str(env.root),
             "valid": True,
             "directories": dirs,
-            "next_sequence": env.next_sequence(),
+            "next_sequence": env.peek_next_sequence(),
             "highest_sequence": env.highest_sequence(),
             "relay_backlog": env.check_relay_backlog(),
         }
@@ -712,8 +801,10 @@ def create_app(env_path: Path) -> FastAPI:
                 scope=req.scope,
             )
             return {"blink_id": blink.blink_id, "status": "created"}
-        except Exception as exc:
+        except ValueError as exc:
             return JSONResponse(status_code=400, content={"error": str(exc)})
+        except Exception:
+            return JSONResponse(status_code=400, content={"error": "Failed to compose blink"})
 
     # ──────────────────────── CONVERGENCE ─────────────────────
 
@@ -782,12 +873,12 @@ def create_app(env_path: Path) -> FastAPI:
 
         # Relay backlog
         try:
-            backlog = env.check_relay_backlog()
-            status = "ok" if backlog < 10 else "warning" if backlog < 25 else "error"
+            backlog_count = env.relay_count()
+            status = "ok" if backlog_count < 10 else "warning" if backlog_count < 25 else "error"
             checks.append({
                 "name": "Relay Backlog",
                 "status": status,
-                "detail": f"{backlog} blinks in relay queue",
+                "detail": f"{backlog_count} blinks in relay queue",
             })
         except Exception as exc:
             checks.append({"name": "Relay Backlog", "status": "error", "detail": str(exc)})
@@ -821,7 +912,7 @@ def create_app(env_path: Path) -> FastAPI:
 
     # ──────────────────── RELAY RUNNER (SSE) ──────────────────
 
-    _runner_events: queue.Queue = queue.Queue()
+    _runner_events: asyncio.Queue = asyncio.Queue()
     _runner_state = {"active": False, "thread": None}
 
     @app.post("/api/relay/run/start")
@@ -835,16 +926,19 @@ def create_app(env_path: Path) -> FastAPI:
             env = get_env()
             mm = ModelManager()
             runner = RelayRunner(env, mm)
+            loop = asyncio.get_event_loop()
 
             def _callback(event):
-                _runner_events.put(event)
+                loop.call_soon_threadsafe(_runner_events.put_nowait, event)
 
             def _run():
                 try:
                     runner.auto_run(req.sigils, max_rounds=req.max_rounds, callback=_callback)
-                    _runner_events.put({"type": "done"})
+                    loop.call_soon_threadsafe(_runner_events.put_nowait, {"type": "done"})
                 except Exception as exc:
-                    _runner_events.put({"type": "error", "error": str(exc)})
+                    loop.call_soon_threadsafe(
+                        _runner_events.put_nowait, {"type": "error", "error": str(exc)}
+                    )
                 finally:
                     _runner_state["active"] = False
 
@@ -853,7 +947,7 @@ def create_app(env_path: Path) -> FastAPI:
             while not _runner_events.empty():
                 try:
                     _runner_events.get_nowait()
-                except queue.Empty:
+                except asyncio.QueueEmpty:
                     break
 
             t = threading.Thread(target=_run, daemon=True)
@@ -863,12 +957,12 @@ def create_app(env_path: Path) -> FastAPI:
         except ImportError:
             return JSONResponse(status_code=503, content={"error": "Runner dependencies not available"})
         except Exception as exc:
-            return JSONResponse(status_code=500, content={"error": str(exc)})
+            return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
     @app.post("/api/relay/run/stop")
     async def relay_run_stop():
         _runner_state["active"] = False
-        _runner_events.put({"type": "done"})
+        await _runner_events.put({"type": "done"})
         return {"status": "stopped"}
 
     @app.get("/api/relay/run/stream")
@@ -879,11 +973,11 @@ def create_app(env_path: Path) -> FastAPI:
         async def event_generator():
             while True:
                 try:
-                    event = _runner_events.get(timeout=1)
+                    event = await asyncio.wait_for(_runner_events.get(), timeout=1.0)
                     yield f"data: {json.dumps(event)}\n\n"
                     if event.get("type") == "done":
                         break
-                except queue.Empty:
+                except asyncio.TimeoutError:
                     yield f"data: {json.dumps({'type': 'heartbeat'})}\n\n"
 
         return StreamingResponse(event_generator(), media_type="text/event-stream")
@@ -891,6 +985,7 @@ def create_app(env_path: Path) -> FastAPI:
     # ──────────────────────── CHAT ────────────────────────────
 
     _chat_sessions: dict = {}
+    _chat_lock = threading.Lock()
 
     @app.post("/api/chat/send")
     async def chat_send(req: ChatRequest):
@@ -900,11 +995,12 @@ def create_app(env_path: Path) -> FastAPI:
             from integrations.models import ModelManager
             from integrations.session import BSSSession
 
-            if req.sigil not in _chat_sessions:
-                mm = ModelManager()
-                _chat_sessions[req.sigil] = BSSSession(env, req.sigil, mm)
+            with _chat_lock:
+                if req.sigil not in _chat_sessions:
+                    mm = ModelManager()
+                    _chat_sessions[req.sigil] = BSSSession(env, req.sigil, mm)
+                session = _chat_sessions[req.sigil]
 
-            session = _chat_sessions[req.sigil]
             # Ensure intake has been done
             if session._system_prompt is None:
                 session.intake()
@@ -920,7 +1016,8 @@ def create_app(env_path: Path) -> FastAPI:
                 blink = session.handoff(summary, min_sentences=1)
                 blink_id = blink.blink_id
                 # Reset session for next message (fresh relay context)
-                _chat_sessions.pop(req.sigil, None)
+                with _chat_lock:
+                    _chat_sessions.pop(req.sigil, None)
             except Exception:
                 blink_id = None
 
@@ -933,12 +1030,13 @@ def create_app(env_path: Path) -> FastAPI:
             }
         except ImportError:
             return JSONResponse(status_code=503, content={"error": "Model backends not available. Configure models in the terminal gateway first."})
-        except Exception as exc:
-            return JSONResponse(status_code=500, content={"error": str(exc)})
+        except Exception:
+            return JSONResponse(status_code=500, content={"error": "Internal server error during chat"})
 
     @app.post("/api/chat/clear")
     async def chat_clear():
-        _chat_sessions.clear()
+        with _chat_lock:
+            _chat_sessions.clear()
         return {"status": "cleared"}
 
     # ──────────────────────── TASK BOARD ──────────────────────
@@ -1322,7 +1420,7 @@ def create_app(env_path: Path) -> FastAPI:
 
     @app.get("/api/settings/config")
     async def settings_get_config():
-        """Read current model configuration."""
+        """Read current model configuration (API keys are masked)."""
         import yaml
         config_path = Path("integrations/config.yaml")
         if not config_path.exists():
@@ -1330,9 +1428,11 @@ def create_app(env_path: Path) -> FastAPI:
         try:
             raw = config_path.read_text(encoding="utf-8")
             cfg = yaml.safe_load(raw) or {}
-            return {"models": cfg.get("models", {}), "config_path": str(config_path.resolve())}
+            # Mask API keys before sending to frontend
+            masked_models = _mask_config_keys(cfg.get("models", {}))
+            return {"models": masked_models, "config_path": str(config_path.resolve())}
         except Exception as exc:
-            return {"models": {}, "config_path": str(config_path), "error": str(exc)}
+            return {"models": {}, "config_path": str(config_path), "error": "Failed to read config"}
 
     @app.post("/api/settings/config")
     async def settings_update_config(req: SettingsConfigUpdate):
@@ -1340,11 +1440,40 @@ def create_app(env_path: Path) -> FastAPI:
         import yaml
         config_path = Path("integrations/config.yaml")
         try:
-            cfg = {"models": req.models}
-            config_path.write_text(yaml.dump(cfg, default_flow_style=False, sort_keys=False), encoding="utf-8")
+            # Preserve existing API keys when frontend sends masked values
+            existing_models = {}
+            if config_path.exists():
+                try:
+                    existing = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+                    existing_models = existing.get("models", {})
+                except Exception:
+                    pass
+
+            # For each model, if the incoming api_key starts with "****",
+            # keep the existing key instead
+            models = dict(req.models)
+            for sigil, cfg in models.items():
+                if "api_key" in cfg and isinstance(cfg["api_key"], str):
+                    if cfg["api_key"].startswith("****") and sigil in existing_models:
+                        existing_key = existing_models[sigil].get("api_key", "")
+                        if existing_key:
+                            cfg["api_key"] = existing_key
+                        else:
+                            del cfg["api_key"]
+
+            out = {"models": models}
+            config_path.parent.mkdir(parents=True, exist_ok=True)
+            config_path.write_text(
+                "# WARNING: This file may contain API keys. Keep it private.\n"
+                + yaml.dump(out, default_flow_style=False, sort_keys=False),
+                encoding="utf-8",
+            )
+            # Restore restrictive permissions (owner read/write only)
+            if sys.platform != "win32":
+                os.chmod(str(config_path), 0o600)
             return {"ok": True}
         except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc))
+            raise HTTPException(status_code=500, detail="Failed to save config")
 
     @app.get("/api/settings/discover")
     async def settings_discover():
@@ -1420,17 +1549,31 @@ def create_app(env_path: Path) -> FastAPI:
                 start_new_session=True,
             )
             return {"ok": True, "message": "Gateway launched"}
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc))
+        except Exception:
+            raise HTTPException(status_code=500, detail="Failed to launch gateway")
 
     return app
 
 
-def launch_dashboard(env_path: Path, port: int = 8741, open_browser: bool = True):
-    """Launch the BSS dashboard server."""
+def launch_dashboard(
+    env_path: Path,
+    port: int = 8741,
+    host: str = "127.0.0.1",
+    open_browser: bool = True,
+):
+    """Launch the BSS dashboard server.
+
+    Args:
+        env_path: Path to the BSS environment root.
+        port: Port to bind to.
+        host: Host address to bind to (default: 127.0.0.1 for security).
+        open_browser: Whether to auto-open the browser.
+    """
     import uvicorn
 
-    app = create_app(env_path)
+    # Generate auth token for this session
+    auth_token = secrets.token_urlsafe(32)
+    app = create_app(env_path, auth_token=auth_token, port=port)
 
     def _open_browser():
         time.sleep(1.5)
@@ -1439,21 +1582,37 @@ def launch_dashboard(env_path: Path, port: int = 8741, open_browser: bool = True
     if open_browser:
         threading.Thread(target=_open_browser, daemon=True).start()
 
-    print(f"\n  BSS Dashboard running at http://localhost:{port}")
+    print(f"\n  BSS Dashboard running at http://{host}:{port}")
     print(f"  Environment: {env_path}")
+    print(f"  Auth token:  {auth_token}")
+    if host != "127.0.0.1" and host != "localhost":
+        print(f"  WARNING: Server is exposed on {host}. Auth token is required for API access.")
     print(f"  Press Ctrl+C to stop\n")
 
-    uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")
+    uvicorn.run(app, host=host, port=port, log_level="warning")
 
 
-def launch_dashboard_background(env_path: Path, port: int = 8741, open_browser: bool = True):
-    """Launch the BSS dashboard in a background daemon thread (non-blocking)."""
+def launch_dashboard_background(
+    env_path: Path,
+    port: int = 8741,
+    host: str = "127.0.0.1",
+    open_browser: bool = True,
+):
+    """Launch the BSS dashboard in a background daemon thread (non-blocking).
+
+    Args:
+        env_path: Path to the BSS environment root.
+        port: Port to bind to.
+        host: Host address to bind to (default: 127.0.0.1 for security).
+        open_browser: Whether to auto-open the browser.
+    """
     import uvicorn
 
-    app = create_app(env_path)
+    auth_token = secrets.token_urlsafe(32)
+    app = create_app(env_path, auth_token=auth_token, port=port)
 
     def _serve():
-        uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")
+        uvicorn.run(app, host=host, port=port, log_level="warning")
 
     server_thread = threading.Thread(target=_serve, daemon=True)
     server_thread.start()
@@ -1464,5 +1623,6 @@ def launch_dashboard_background(env_path: Path, port: int = 8741, open_browser: 
             webbrowser.open(f"http://localhost:{port}")
         threading.Thread(target=_open, daemon=True).start()
 
-    print(f"  BSS Dashboard running in background at http://localhost:{port}")
+    print(f"  BSS Dashboard running in background at http://{host}:{port}")
+    print(f"  Auth token: {auth_token}")
     return server_thread

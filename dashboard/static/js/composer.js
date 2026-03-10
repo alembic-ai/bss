@@ -35,11 +35,7 @@
         const result = document.getElementById('composer-result');
         result.innerHTML = '<div class="loading-spinner"></div>';
 
-        const data = await fetch('/api/blinks/compose', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ summary, author, action_energy: energy, action_valence: valence, domain, subdomain, scope, parent: parent || null }),
-        }).then(r => r.json()).catch(e => ({ error: String(e) }));
+        const data = await BSS.apiPost('/api/blinks/compose', { summary, author, action_energy: energy, action_valence: valence, domain, subdomain, scope, parent: parent || null });
 
         if (data.error) {
             result.innerHTML = `<div style="color:var(--error);padding:12px">\u2717 Error: ${BSS.escHtml(data.error || data.detail || 'Unknown error')}</div>`;

@@ -24,14 +24,39 @@ const BSS = {
     _rosterCache: null,
 };
 
+BSS._authHeaders = function() {
+    const headers = {};
+    if (window.__BSS_TOKEN__) {
+        headers['Authorization'] = `Bearer ${window.__BSS_TOKEN__}`;
+    }
+    return headers;
+};
+
 BSS.apiFetch = async function(endpoint) {
     try {
-        const res = await fetch(`${BSS.API}${endpoint}`);
+        const res = await fetch(`${BSS.API}${endpoint}`, {
+            headers: BSS._authHeaders(),
+        });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return await res.json();
     } catch (err) {
         console.error(`API error: ${endpoint}`, err);
         return null;
+    }
+};
+
+BSS.apiPost = async function(endpoint, body) {
+    try {
+        const headers = { 'Content-Type': 'application/json', ...BSS._authHeaders() };
+        const res = await fetch(`${BSS.API}${endpoint}`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(body),
+        });
+        return await res.json();
+    } catch (err) {
+        console.error(`API POST error: ${endpoint}`, err);
+        return { error: String(err) };
     }
 };
 

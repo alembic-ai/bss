@@ -26,11 +26,7 @@
         document.getElementById('runner-log').innerHTML = '';
         addLogEntry('system', `Starting relay with ${sigils.join(', ')} for ${maxRounds} rounds...`);
 
-        const res = await fetch('/api/relay/run/start', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sigils, max_rounds: maxRounds }),
-        }).then(r => r.json()).catch(e => ({ error: String(e) }));
+        const res = await BSS.apiPost('/api/relay/run/start', { sigils, max_rounds: maxRounds });
 
         if (res.error) { addLogEntry('error', 'Failed to start: ' + res.error); return; }
         addLogEntry('system', 'Relay started. Connecting to event stream...');
@@ -39,7 +35,7 @@
     };
 
     window.stopRelay = async function() {
-        await fetch('/api/relay/run/stop', { method: 'POST' }).catch(() => {});
+        await BSS.apiPost('/api/relay/run/stop', {});
         if (eventSource) { eventSource.close(); eventSource = null; }
         addLogEntry('system', 'Stop requested.');
         updateStatus();
@@ -47,7 +43,10 @@
 
     function connectSSE() {
         if (eventSource) eventSource.close();
-        eventSource = new EventSource('/api/relay/run/stream');
+        const sseUrl = window.__BSS_TOKEN__
+            ? `/api/relay/run/stream?token=${encodeURIComponent(window.__BSS_TOKEN__)}`
+            : '/api/relay/run/stream';
+        eventSource = new EventSource(sseUrl);
         eventSource.onmessage = (e) => {
             try {
                 const evt = JSON.parse(e.data);

@@ -35,11 +35,7 @@
         const typing = addTypingIndicator(sigil);
 
         try {
-            const res = await fetch('/api/chat/send', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sigil, message: msg }),
-            }).then(r => r.json());
+            const res = await BSS.apiPost('/api/chat/send', { sigil, message: msg });
 
             typing.remove();
 
@@ -68,7 +64,7 @@
         document.getElementById('chat-messages').innerHTML =
             '<div class="chat-welcome"><div class="chat-welcome-icon">\u25C8</div><div class="chat-welcome-title">Talk to your Swarm</div><div class="chat-welcome-sub">Select a model and send a message. The model reads your relay state, processes your request, and writes a handoff blink with its response.</div></div>';
         chatHistory = [];
-        fetch('/api/chat/clear', { method: 'POST' }).catch(() => {});
+        BSS.apiPost('/api/chat/clear', {});
     };
 
     function addChatBubble(type, text, sigil, tokens, elapsed) {

@@ -32,11 +32,7 @@
             return;
         }
 
-        const data = await fetch('/api/export/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ format, sections, authors, title }),
-        }).then(r => r.json()).catch(e => ({ error: String(e) }));
+        const data = await BSS.apiPost('/api/export/generate', { format, sections, authors, title });
 
         if (data.error) {
             result.innerHTML = `<div style="color:var(--error);padding:12px">${BSS.escHtml(data.error)}</div>`;

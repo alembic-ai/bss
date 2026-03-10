@@ -38,11 +38,7 @@
         if (!summary || summary.split(/[.!?]+/).filter(s => s.trim()).length < 2) {
             alert('Convergence summary must have at least 2 sentences.'); return;
         }
-        const data = await fetch('/api/convergence/converge', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ leaf_blink_id: leafBlinkId, summary }),
-        }).then(r => r.json()).catch(e => ({ error: String(e) }));
+        const data = await BSS.apiPost('/api/convergence/converge', { leaf_blink_id: leafBlinkId, summary });
 
         if (data.error) {
             alert('Error: ' + (data.error || data.detail));
