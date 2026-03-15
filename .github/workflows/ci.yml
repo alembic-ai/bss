@@ -40,6 +40,8 @@ jobs:
           pip install ".[dev]"
           pip install pip-audit bandit
       - name: Dependency vulnerability scan
-        run: pip-audit --strict
+        run: |
+          pip freeze --exclude-editable | grep -vi blink-sigil-system > /tmp/requirements.txt
+          pip-audit --strict -r /tmp/requirements.txt
       - name: Static security analysis
         run: bandit -r src/ cli/ dashboard/ integrations/ terminal/ -ll --exclude tests/ -q
