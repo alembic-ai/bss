@@ -3,8 +3,8 @@
 import pytest
 from pathlib import Path
 
-from src.bss.environment import BSSEnvironment
-from src.bss.roster import (
+from bss.environment import BSSEnvironment
+from bss.roster import (
     Roster,
     RosterEntry,
     read_roster,
@@ -13,8 +13,8 @@ from src.bss.roster import (
     VALID_ROLES,
     VALID_CEILINGS,
 )
-from src.bss.blink_file import BlinkFile, write as write_blink
-from src.bss.identifier import generate
+from bss.blink_file import BlinkFile, write as write_blink
+from bss.identifier import generate
 
 
 @pytest.fixture

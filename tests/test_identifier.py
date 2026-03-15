@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.bss.identifier import (
+from bss.identifier import (
     BlinkMetadata,
     base36_decode,
     base36_encode,
@@ -11,7 +11,7 @@ from src.bss.identifier import (
     parse,
     validate,
 )
-from src.bss.sigils import (
+from bss.sigils import (
     VALID_ACTION_COMPOUNDS,
     VALID_CHARS,
     describe,
@@ -575,37 +575,37 @@ class TestSigilCompleteness:
     """Verify that all sigil maps are consistent with VALID_CHARS."""
 
     def test_relational_chars_match(self):
-        from src.bss.sigils import RELATIONAL
+        from bss.sigils import RELATIONAL
         assert set(RELATIONAL.keys()) == VALID_CHARS["relational"]
 
     def test_confidence_chars_match(self):
-        from src.bss.sigils import CONFIDENCE
+        from bss.sigils import CONFIDENCE
         assert set(CONFIDENCE.keys()) == VALID_CHARS["confidence"]
 
     def test_cognitive_chars_match(self):
-        from src.bss.sigils import COGNITIVE
+        from bss.sigils import COGNITIVE
         assert set(COGNITIVE.keys()) == VALID_CHARS["cognitive"]
 
     def test_domain_chars_match(self):
-        from src.bss.sigils import DOMAIN
+        from bss.sigils import DOMAIN
         assert set(DOMAIN.keys()) == VALID_CHARS["domain"]
 
     def test_subdomain_chars_match(self):
-        from src.bss.sigils import SUBDOMAIN
+        from bss.sigils import SUBDOMAIN
         assert set(SUBDOMAIN.keys()) == VALID_CHARS["subdomain"]
 
     def test_scope_chars_match(self):
-        from src.bss.sigils import SCOPE
+        from bss.sigils import SCOPE
         assert set(SCOPE.keys()) == VALID_CHARS["scope"]
 
     def test_maturity_chars_match(self):
-        from src.bss.sigils import MATURITY
+        from bss.sigils import MATURITY
         assert set(MATURITY.keys()) == VALID_CHARS["maturity"]
 
     def test_priority_chars_match(self):
-        from src.bss.sigils import PRIORITY
+        from bss.sigils import PRIORITY
         assert set(PRIORITY.keys()) == VALID_CHARS["priority"]
 
     def test_sensitivity_chars_match(self):
-        from src.bss.sigils import SENSITIVITY
+        from bss.sigils import SENSITIVITY
         assert set(SENSITIVITY.keys()) == VALID_CHARS["sensitivity"]

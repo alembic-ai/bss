@@ -5,9 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from src.bss.blink_file import BlinkFile, read as read_blink, write as write_blink
-from src.bss.environment import BSSEnvironment
-from src.bss.identifier import generate, parse as parse_id
+from bss.blink_file import BlinkFile, read as read_blink, write as write_blink
+from bss.environment import BSSEnvironment
+from bss.identifier import generate, parse as parse_id
 
 VALID_ROLES = {"primary", "reviewer", "specialist", "architect"}
 VALID_CEILINGS = {"atomic", "local", "regional", "global"}

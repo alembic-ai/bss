@@ -5,9 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 
-from src.bss.blink_file import BlinkFile, write as write_blink, read as read_blink
-from src.bss.environment import BSSEnvironment
-from src.bss.identifier import generate, parse as parse_id
+from bss.blink_file import BlinkFile, write as write_blink, read as read_blink
+from bss.environment import BSSEnvironment
+from bss.identifier import generate, parse as parse_id
 
 
 class SessionPhase(Enum):

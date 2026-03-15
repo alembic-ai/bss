@@ -8,7 +8,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from src.bss.identifier import BLINK_ID_LENGTH, validate as validate_id
+from bss.identifier import BLINK_ID_LENGTH, validate as validate_id
 
 # The arrow separator required in Lineage fields
 LINEAGE_SEPARATOR = " \u2192 "  # → (U+2192)
@@ -308,7 +308,7 @@ def validate_file(
 
     # Check relational / born_from consistency
     is_roster = False
-    from src.bss.identifier import parse as parse_id
+    from bss.identifier import parse as parse_id
     try:
         meta = parse_id(blink.blink_id)
         is_roster = meta.author == "S"

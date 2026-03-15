@@ -62,9 +62,9 @@ all-providers = [
 bss = "cli.main:app"
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["src*", "cli*", "integrations*", "terminal*", "dashboard*"]
+where = ["src", "."]
+include = ["bss*", "cli*", "integrations*", "terminal*", "dashboard*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
+pythonpath = ["src", "."]

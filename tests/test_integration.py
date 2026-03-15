@@ -3,21 +3,21 @@
 import pytest
 from pathlib import Path
 
-from src.bss.blink_file import (
+from bss.blink_file import (
     BlinkFile, write as write_blink, read as read_blink,
     validate_file, parse_content, MAX_FILE_SIZE, WARN_FILE_SIZE,
 )
-from src.bss.environment import BSSEnvironment
-from src.bss.relay import (
+from bss.environment import BSSEnvironment
+from bss.relay import (
     Session, SessionPhase, handoff, error_blink, check_escalation,
 )
-from src.bss.generations import (
+from bss.generations import (
     get_generation, needs_convergence, get_chain, converge,
 )
-from src.bss.roster import (
+from bss.roster import (
     Roster, RosterEntry, read_roster, update_roster, check_scope_compliance,
 )
-from src.bss.identifier import generate, parse as parse_id, validate as validate_id
+from bss.identifier import generate, parse as parse_id, validate as validate_id
 
 
 @pytest.fixture
@@ -692,7 +692,7 @@ class TestRosterManagementEndToEnd:
 
     def test_roster_lifecycle(self, env):
         """Full cycle: create roster, add model, update, generate config, remove."""
-        from src.bss.roster import generate_model_config
+        from bss.roster import generate_model_config
 
         # 1. Create initial roster with one model
         entries_v1 = [
@@ -773,7 +773,7 @@ class TestRosterManagementEndToEnd:
 
     def test_artifact_with_roster_integration(self, env):
         """Artifacts work alongside roster management."""
-        from src.bss.roster import generate_model_config
+        from bss.roster import generate_model_config
 
         # Setup roster
         entries = [

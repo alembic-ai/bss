@@ -9,8 +9,8 @@ from rich.table import Table
 from textual.reactive import reactive
 from textual.widgets import Static
 
-from src.bss.environment import BSSEnvironment
-from src.bss.roster import read_roster
+from bss.environment import BSSEnvironment
+from bss.roster import read_roster
 
 
 class RelayStatusWidget(Static):

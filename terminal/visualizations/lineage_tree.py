@@ -10,9 +10,9 @@ from textual.reactive import reactive
 from textual.widgets import Static
 from textual.containers import ScrollableContainer
 
-from src.bss.environment import BSSEnvironment
-from src.bss.generations import get_chain
-from src.bss.identifier import parse as parse_id
+from bss.environment import BSSEnvironment
+from bss.generations import get_chain
+from bss.identifier import parse as parse_id
 
 
 class LineageTreeWidget(ScrollableContainer):

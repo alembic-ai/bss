@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-import src.bss.bss_logger as bss_logger
-from src.bss.bss_logger import get_logger, configure
+import bss.bss_logger as bss_logger
+from bss.bss_logger import get_logger, configure
 
 
 @pytest.fixture(autouse=True)

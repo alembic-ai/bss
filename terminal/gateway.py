@@ -10,7 +10,7 @@ from textual.containers import Container, Horizontal, Vertical
 from textual.widgets import Footer, Header, Static, Input, Button
 from textual.binding import Binding
 
-from src.bss.environment import BSSEnvironment
+from bss.environment import BSSEnvironment
 from terminal.visualizations import (
     RelayStatusWidget,
     BlinkTimelineWidget,

@@ -150,7 +150,7 @@ def describe(blink_id: str) -> str:
     Returns a multi-line human-readable breakdown of each position,
     similar to the annotated example in Section 3.4 of the spec.
     """
-    from src.bss.identifier import parse, validate
+    from bss.identifier import parse, validate
 
     valid, violations = validate(blink_id)
     if not valid:

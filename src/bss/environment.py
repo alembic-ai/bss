@@ -11,8 +11,8 @@ import sys
 import warnings
 from pathlib import Path
 
-from src.bss.blink_file import BlinkFile, read as read_blink
-from src.bss.identifier import (
+from bss.blink_file import BlinkFile, read as read_blink
+from bss.identifier import (
     base36_decode,
     next_sequence,
     parse as parse_id,

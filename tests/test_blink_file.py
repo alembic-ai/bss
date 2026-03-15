@@ -3,7 +3,7 @@
 import pytest
 from pathlib import Path
 
-from src.bss.blink_file import (
+from bss.blink_file import (
     BlinkFile,
     read,
     write,
@@ -13,7 +13,7 @@ from src.bss.blink_file import (
     _contains_blink_id,
     MAX_FILE_SIZE,
 )
-from src.bss.identifier import generate
+from bss.identifier import generate
 
 
 @pytest.fixture

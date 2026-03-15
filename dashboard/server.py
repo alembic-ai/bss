@@ -20,18 +20,18 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from src.bss.environment import BSSEnvironment
-from src.bss.roster import read_roster
-from src.bss.sigils import (
+from bss.environment import BSSEnvironment
+from bss.roster import read_roster
+from bss.sigils import (
     ACTION_STATES, ACTION_ENERGY, ACTION_VALENCE,
     RELATIONAL, CONFIDENCE, COGNITIVE,
     DOMAIN, SUBDOMAIN, SCOPE, MATURITY, PRIORITY, SENSITIVITY,
     describe,
 )
-from src.bss.identifier import parse, validate, generate
-from src.bss.blink_file import read as read_blink, BlinkFile
-from src.bss.generations import get_generation, get_chain, needs_convergence, converge
-from src.bss.relay import check_escalation, handoff, SessionPhase
+from bss.identifier import parse, validate, generate
+from bss.blink_file import read as read_blink, BlinkFile
+from bss.generations import get_generation, get_chain, needs_convergence, converge
+from bss.relay import check_escalation, handoff, SessionPhase
 
 
 DASHBOARD_DIR = Path(__file__).parent

@@ -9,7 +9,7 @@ from textual.containers import Container, Vertical
 from textual.widgets import Button, Static, Label
 from textual.screen import Screen
 
-from src.bss.environment import BSSEnvironment
+from bss.environment import BSSEnvironment
 
 
 class EnvInitScreen(Screen):

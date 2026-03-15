@@ -3,9 +3,9 @@
 import pytest
 from pathlib import Path
 
-from src.bss.environment import BSSEnvironment
-from src.bss.blink_file import BlinkFile, write as write_blink, read as read_blink
-from src.bss.identifier import generate
+from bss.environment import BSSEnvironment
+from bss.blink_file import BlinkFile, write as write_blink, read as read_blink
+from bss.identifier import generate
 
 
 @pytest.fixture

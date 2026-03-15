@@ -9,7 +9,7 @@ from __future__ import annotations
 import threading
 from typing import Callable
 
-from src.bss.environment import BSSEnvironment
+from bss.environment import BSSEnvironment
 
 from integrations.models import ModelManager
 from integrations.session import BSSSession

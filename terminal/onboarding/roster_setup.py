@@ -9,8 +9,8 @@ from textual.containers import Container, Vertical
 from textual.widgets import Button, Static, Input, Label, Select
 from textual.screen import Screen
 
-from src.bss.environment import BSSEnvironment
-from src.bss.roster import RosterEntry, Roster, update_roster, read_roster
+from bss.environment import BSSEnvironment
+from bss.roster import RosterEntry, Roster, update_roster, read_roster
 
 
 class RosterSetupScreen(Screen):

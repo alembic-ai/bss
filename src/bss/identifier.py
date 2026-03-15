@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from src.bss.sigils import (
+from bss.sigils import (
     VALID_ACTION_COMPOUNDS,
     VALID_CHARS,
 )

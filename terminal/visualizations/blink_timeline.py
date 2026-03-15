@@ -10,8 +10,8 @@ from textual.reactive import reactive
 from textual.widgets import Static
 from textual.containers import ScrollableContainer
 
-from src.bss.environment import BSSEnvironment
-from src.bss.identifier import parse as parse_id
+from bss.environment import BSSEnvironment
+from bss.identifier import parse as parse_id
 
 
 class BlinkTimelineWidget(ScrollableContainer):
@@ -98,7 +98,7 @@ class BlinkTimelineWidget(ScrollableContainer):
             # Show up to 50 most recent
             for blink_path, blink_id in all_blinks[:50]:
                 try:
-                    from src.bss.blink_file import read as read_blink
+                    from bss.blink_file import read as read_blink
                     blink = read_blink(blink_path)
                     meta = parse_id(blink_id)
 

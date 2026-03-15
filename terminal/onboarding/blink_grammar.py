@@ -9,8 +9,8 @@ from textual.containers import Container, Vertical
 from textual.widgets import Button, Static, Label
 from textual.screen import Screen
 
-from src.bss.identifier import generate, parse as parse_id
-from src.bss.sigils import describe as describe_id
+from bss.identifier import generate, parse as parse_id
+from bss.sigils import describe as describe_id
 
 
 class BlinkGrammarScreen(Screen):

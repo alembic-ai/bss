@@ -12,22 +12,22 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.tree import Tree
 
-from src.bss.blink_file import BlinkFile, read as read_blink, write as write_blink
-from src.bss.environment import BSSEnvironment
-from src.bss.identifier import (
+from bss.blink_file import BlinkFile, read as read_blink, write as write_blink
+from bss.environment import BSSEnvironment
+from bss.identifier import (
     generate,
     parse as parse_id,
     validate as validate_id,
     base36_decode,
 )
-from src.bss.sigils import (
+from bss.sigils import (
     ACTION_STATES,
     DOMAIN,
     SUBDOMAIN,
     describe as describe_blink_id,
 )
-from src.bss.relay import check_escalation
-from src.bss.roster import (
+from bss.relay import check_escalation
+from bss.roster import (
     RosterEntry,
     Roster,
     read_roster,
@@ -37,7 +37,7 @@ from src.bss.roster import (
     VALID_ROLES,
     VALID_CEILINGS,
 )
-from src.bss.generations import get_chain
+from bss.generations import get_chain
 
 app = typer.Typer(
     name="bss",
@@ -1195,7 +1195,7 @@ def health(
 ):
     """Check environment health: dirs, relay backlog, error chains."""
     env = _get_env(path)
-    from src.bss.environment import RELAY_WARN_THRESHOLD
+    from bss.environment import RELAY_WARN_THRESHOLD
     issues: list[str] = []
 
     # 1. Directory check

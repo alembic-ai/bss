@@ -7,10 +7,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.bss.blink_file import BlinkFile, write as write_blink, read as read_blink
-from src.bss.environment import BSSEnvironment
-from src.bss.identifier import generate
-from src.bss.roster import RosterEntry, update_roster
+from bss.blink_file import BlinkFile, write as write_blink, read as read_blink
+from bss.environment import BSSEnvironment
+from bss.identifier import generate
+from bss.roster import RosterEntry, update_roster
 
 
 @pytest.fixture
@@ -95,7 +95,7 @@ class TestBSSSession:
     def test_intake_includes_relay_context(self, env, mock_model_manager):
         """If there are blinks in /relay/, they appear in the system prompt."""
         from integrations.session import BSSSession
-        from src.bss.relay import handoff
+        from bss.relay import handoff
 
         # Write a handoff blink to relay
         handoff(env, "Previous model completed analysis of the codebase. Key findings documented.", author="B")

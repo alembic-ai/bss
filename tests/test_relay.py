@@ -3,22 +3,22 @@
 import pytest
 from pathlib import Path
 
-from src.bss.relay import (
+from bss.relay import (
     Session,
     SessionPhase,
     handoff,
     error_blink,
     check_escalation,
 )
-from src.bss.generations import (
+from bss.generations import (
     get_generation,
     needs_convergence,
     get_chain,
     converge,
 )
-from src.bss.environment import BSSEnvironment
-from src.bss.blink_file import BlinkFile, write as write_blink, read as read_blink
-from src.bss.identifier import generate, parse as parse_id
+from bss.environment import BSSEnvironment
+from bss.blink_file import BlinkFile, write as write_blink, read as read_blink
+from bss.identifier import generate, parse as parse_id
 
 
 @pytest.fixture

@@ -5,11 +5,11 @@ Reads relay state, builds context, runs inference, writes blinks.
 
 from __future__ import annotations
 
-from src.bss.blink_file import BlinkFile, write as write_blink
-from src.bss.environment import BSSEnvironment
-from src.bss.identifier import generate, parse as parse_id
-from src.bss.relay import Session, handoff as relay_handoff
-from src.bss.roster import read_roster, generate_model_config
+from bss.blink_file import BlinkFile, write as write_blink
+from bss.environment import BSSEnvironment
+from bss.identifier import generate, parse as parse_id
+from bss.relay import Session, handoff as relay_handoff
+from bss.roster import read_roster, generate_model_config
 
 from integrations.models import ModelManager
 
@@ -169,7 +169,7 @@ class BSSSession:
         )
 
         if parent_id:
-            from src.bss.blink_file import read as read_blink
+            from bss.blink_file import read as read_blink
             born_from = [parent_id]
             parent_path = self.env.find_blink(parent_id)
             if parent_path:

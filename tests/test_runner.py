@@ -8,10 +8,10 @@ from unittest.mock import MagicMock, patch, call
 
 import pytest
 
-from src.bss.blink_file import BlinkFile, write as write_blink, read as read_blink
-from src.bss.environment import BSSEnvironment
-from src.bss.identifier import generate
-from src.bss.roster import RosterEntry, update_roster
+from bss.blink_file import BlinkFile, write as write_blink, read as read_blink
+from bss.environment import BSSEnvironment
+from bss.identifier import generate
+from bss.roster import RosterEntry, update_roster
 
 
 @pytest.fixture

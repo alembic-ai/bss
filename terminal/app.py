@@ -15,10 +15,10 @@ from textual.binding import Binding
 from textual.reactive import reactive
 from rich.text import Text
 
-from src.bss.environment import BSSEnvironment
-from src.bss.identifier import parse as parse_id, base36_decode
-from src.bss.roster import read_roster, update_roster, RosterEntry
-from src.bss.sigils import ACTION_STATES
+from bss.environment import BSSEnvironment
+from bss.identifier import parse as parse_id, base36_decode
+from bss.roster import read_roster, update_roster, RosterEntry
+from bss.sigils import ACTION_STATES
 
 from integrations.models import ModelManager
 from integrations.runner import RelayRunner

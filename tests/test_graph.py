@@ -3,10 +3,10 @@
 import pytest
 from pathlib import Path
 
-from src.bss.environment import BSSEnvironment
-from src.bss.blink_file import BlinkFile, write as write_blink, read as read_blink
-from src.bss.identifier import generate, parse as parse_id
-from src.bss.roster import (
+from bss.environment import BSSEnvironment
+from bss.blink_file import BlinkFile, write as write_blink, read as read_blink
+from bss.identifier import generate, parse as parse_id
+from bss.roster import (
     Roster,
     RosterEntry,
     read_roster,
@@ -141,7 +141,7 @@ class TestLineageTruncation:
             lineage=ids,
             links=[],
         )
-        from src.bss.blink_file import validate_file
+        from bss.blink_file import validate_file
         valid, violations = validate_file(blink)
         assert valid, f"Lineage of 7 should be valid: {violations}"
 
